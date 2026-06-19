@@ -1,4 +1,4 @@
-import type { ForbiddenPhrase } from "@complaintops/shared";
+import type { ForbiddenPhrase } from "@/lib/types";
 
 export function ForbiddenPhraseList({ items }: { items: ForbiddenPhrase[] }) {
   if (items.length === 0) return null;

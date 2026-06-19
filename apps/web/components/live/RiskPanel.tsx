@@ -1,4 +1,4 @@
-import type { AnalyzeResult } from "@complaintops/shared";
+import type { AnalyzeResult } from "@/lib/types";
 import { RiskBadge } from "../common/RiskBadge";
 
 const RISK_LABEL: Record<string, string> = {

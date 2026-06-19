@@ -1,4 +1,4 @@
-import type { ConversationEvent } from "@complaintops/shared";
+import type { ConversationEvent } from "@/lib/types";
 
 const WHO: Record<string, string> = {
   customer: "顧客",

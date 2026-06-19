@@ -1,4 +1,4 @@
-import type { AnalyzeResult, ComplaintCase, Session, ConversationEvent } from "@complaintops/shared";
+import type { AnalyzeResult, ComplaintCase, Session, ConversationEvent } from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 

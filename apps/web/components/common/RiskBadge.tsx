@@ -1,4 +1,4 @@
-import type { RiskLevel } from "@complaintops/shared";
+import type { RiskLevel } from "@/lib/types";
 
 const LABEL: Record<RiskLevel, string> = {
   low: "低",

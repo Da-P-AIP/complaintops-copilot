@@ -1,4 +1,4 @@
-import type { AnalyzeResult } from "@complaintops/shared";
+import type { AnalyzeResult } from "@/lib/types";
 import { ForbiddenPhraseList } from "./ForbiddenPhraseList";
 
 export function AdvicePanel({ analysis }: { analysis: AnalyzeResult | null }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AnalyzeResult, ConversationEvent } from "@complaintops/shared";
+import type { AnalyzeResult, ConversationEvent } from "@/lib/types";
 import { api } from "../../../../lib/apiClient";
 import { ConversationLog } from "../../../../components/live/ConversationLog";
 import { ConversationInput } from "../../../../components/live/ConversationInput";

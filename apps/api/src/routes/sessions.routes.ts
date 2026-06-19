@@ -7,7 +7,7 @@ import { analyzeUtterance } from "../orchestrator/ComplaintOpsOrchestrator";
 export const sessionsRouter = Router();
 
 // POST /api/sessions/:sessionId/events — 発話を保存し、顧客発話ならAI判定を返す
-sessionsRouter.post("/:sessionId/events", (req, res) => {
+sessionsRouter.post("/:sessionId/events", async (req, res) => {
   const s = db.sessions.get(req.params.sessionId);
   if (!s) return fail(res, "NOT_FOUND", "セッションが見つかりません", 404);
 
@@ -29,7 +29,7 @@ sessionsRouter.post("/:sessionId/events", (req, res) => {
   let analysis: AnalyzeResult | null = null;
 
   if (speaker === "customer") {
-    analysis = analyzeUtterance(text);
+    analysis = await analyzeUtterance(text);
     if (c) {
       c.latest_risk = {
         risk_level: analysis.risk_level,
