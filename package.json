@@ -1,0 +1,17 @@
+{
+  "name": "complaintops-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "クレーム対応中の人間を守り、報告・承認・残務まで安全に閉じるAIエージェント",
+  "scripts": {
+    "dev:api": "pnpm --filter @complaintops/api dev",
+    "dev:web": "pnpm --filter @complaintops/web dev",
+    "start:api": "pnpm --filter @complaintops/api start",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "pnpm@9.7.0"
+}

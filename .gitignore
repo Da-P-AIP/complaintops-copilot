@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+out/
+*.log
+.env
+.env.local
+.DS_Store
+pnpm-lock.yaml
+coverage/
+
+# 設計資料（戦略・実装計画を含むためローカル保管。リポジトリには載せない）
+各資料/
+
+# pnpm が稀に残す一時ファイル
+_tmp_*
