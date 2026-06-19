@@ -93,6 +93,7 @@ a { color: var(--accent); text-decoration: none; }
 /* ---- Live screen ---- */
 .bubble { background: var(--panel-2); border-radius: 12px; padding: 10px 13px; margin-bottom: 8px; border: 1px solid var(--line); }
 .bubble .who { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.bubble div:last-child { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 
 .tag { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #2a3957; color: var(--text); margin: 3px 5px 3px 0; }
 .tag.danger { background: rgba(248, 113, 113, 0.16); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.3); }
