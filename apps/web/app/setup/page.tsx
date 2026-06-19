@@ -113,6 +113,18 @@ export default function SetupPage() {
     }
   };
 
+  const goBack = async () => {
+    setFree("");
+    setMulti([]);
+    if (idx === 0) {
+      setPhase("industry");
+      return;
+    }
+    const pi = idx - 1;
+    setIdx(pi);
+    await loadOptions(QUESTIONS[pi], industry);
+  };
+
   const toggleMic = () => (listening ? stop() : start((t) => setFree(t)));
   const toggleMulti = (c: string) => setMulti((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
 
@@ -198,6 +210,11 @@ export default function SetupPage() {
             )}
           </div>
           <p className="hint" style={{ marginTop: 8 }}>{supported ? "🎙 音声入力できます" : "※音声はChrome/Edge推奨"}</p>
+          <div className="input-actions" style={{ marginTop: 4 }}>
+            <button className="btn ghost sm" onClick={goBack}>
+              {idx === 0 ? "← 業種選択に戻る" : "← 前の質問に戻る"}
+            </button>
+          </div>
         </div>
       )}
 
