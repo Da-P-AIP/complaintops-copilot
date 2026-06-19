@@ -118,6 +118,15 @@ export interface CompanyRules {
   approval_required: string[];
 }
 
+// 業種テンプレート（02 MVP仕様 10章 / 01 設計思想 12章）
+export interface JobTemplate {
+  id: string;
+  label: string;
+  work_items: string[];
+  common_complaints: string[];
+  required_checks: string[];
+}
+
 // 共通APIレスポンス（05 API仕様 3.4）
 export interface ApiOk<T> {
   ok: true;

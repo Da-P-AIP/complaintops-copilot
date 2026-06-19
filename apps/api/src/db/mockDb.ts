@@ -4,7 +4,9 @@ import type {
   Session,
   ConversationEvent,
   AuditEvent,
+  CompanyRules,
 } from "@complaintops/shared";
+import { DEFAULT_COMPANY_RULES } from "@complaintops/shared";
 
 // MVP: インメモリ Map。後で Firestore に差し替え可能なように最小の窓口だけ用意する。
 export const db = {
@@ -13,6 +15,15 @@ export const db = {
   events: new Map<string, ConversationEvent>(),
   audit: [] as AuditEvent[],
 };
+
+// 初期設定で生成された会社ルール（手続き的記憶 / active policy）
+let activePolicy: CompanyRules = DEFAULT_COMPANY_RULES;
+export function getActivePolicy(): CompanyRules {
+  return activePolicy;
+}
+export function setActivePolicy(rules: CompanyRules): void {
+  activePolicy = rules;
+}
 
 let counter = 0;
 export function genId(prefix: string): string {

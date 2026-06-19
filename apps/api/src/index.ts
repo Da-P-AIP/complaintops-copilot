@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { casesRouter } from "./routes/cases.routes";
 import { sessionsRouter } from "./routes/sessions.routes";
+import { setupRouter } from "./routes/setup.routes";
 import { db } from "./db/mockDb";
 import { ok } from "./utils/response";
 
@@ -29,6 +30,7 @@ app.get("/health", (_req, res) => ok(res, { status: "ok", service: "complaintops
 // 監査ログ閲覧（01 設計思想 7.9 / 改ざん検知デモ用）
 app.get("/api/audit", (_req, res) => ok(res, db.audit));
 
+app.use("/api", setupRouter);
 app.use("/api/cases", casesRouter);
 app.use("/api/sessions", sessionsRouter);
 

@@ -1,4 +1,4 @@
-import type { ForbiddenPhrase, CompanyRules } from "../types";
+import type { ForbiddenPhrase, CompanyRules, JobTemplate } from "../types";
 
 // 02 MVP仕様 8.6 / 15プロンプト.txt 期待出力に準拠した禁忌表現
 export const CORE_FORBIDDEN_PHRASES: ForbiddenPhrase[] = [
@@ -50,6 +50,46 @@ export const RISK_KEYWORDS = {
   legal: ["弁護士", "訴え", "訴訟", "法的", "裁判"],
   threat: ["殺す", "脅", "ぶっ", "許さない"],
 } as const;
+
+// 業種テンプレート（02 MVP仕様 10章）。初期設定で選択し、確認項目などに使う。
+export const JOB_TEMPLATES: JobTemplate[] = [
+  {
+    id: "ec",
+    label: "EC・通販",
+    work_items: ["注文", "商品", "配送", "返品", "返金"],
+    common_complaints: ["商品破損", "配送遅延", "誤配送", "返金要求", "説明不足"],
+    required_checks: ["注文番号", "商品名", "購入日", "配送状況", "破損写真"],
+  },
+  {
+    id: "care",
+    label: "介護・福祉",
+    work_items: ["利用者", "支援記録", "送迎", "職員対応", "作業内容"],
+    common_complaints: ["職員対応", "送迎遅れ", "支援内容", "利用者間トラブル", "説明不足"],
+    required_checks: ["利用者名", "発生日", "担当職員", "支援記録", "関係者"],
+  },
+  {
+    id: "food",
+    label: "飲食",
+    work_items: ["予約", "来店", "注文", "商品", "接客", "衛生"],
+    common_complaints: ["接客態度", "異物混入", "提供遅延", "料金", "予約ミス"],
+    required_checks: ["来店日時", "席番号", "担当者", "注文内容", "レシート"],
+  },
+  {
+    id: "saas",
+    label: "SaaS",
+    work_items: ["契約", "アカウント", "障害", "請求", "サポート履歴"],
+    common_complaints: ["ログイン不可", "請求ミス", "障害", "データ消失", "サポート遅延"],
+    required_checks: ["アカウントID", "契約プラン", "発生時刻", "エラーメッセージ", "操作ログ"],
+  },
+];
+
+// 初期設定チュートリアルの自然文サンプル（業種別）
+export const SETUP_EXAMPLES: Record<string, string> = {
+  ec: "うちは通販ショップです。返金は店長承認が必要です。SNSに書くと言われたら本部に通知してください。責任を認める言い方は避けたいです。改善提案は文章で表示してください。",
+  care: "介護施設です。送迎やケアの苦情が多いです。家族への連絡は施設長承認が必要です。利用者の個人情報の扱いは慎重にしてください。",
+  food: "飲食店です。接客や異物混入の苦情があります。返金や食事券のお詫びは店長承認にしてください。SNS投稿リスクは本部へ。",
+  saas: "SaaSのサポートです。障害や請求ミスの問い合わせが多いです。返金・契約解除は管理者承認が必要です。法的な言及があれば法務へ回してください。",
+};
 
 // 04 DB設計 4章 主要コレクション（Firestore差し替え時の名前を先に固定）
 export const COLLECTIONS = {

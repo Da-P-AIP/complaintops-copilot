@@ -95,3 +95,23 @@ export interface ConversationEvent {
   text: string;
   created_at: string;
 }
+
+export interface CompanyRules {
+  business_type: string;
+  tone: string;
+  forbidden_phrases: ForbiddenPhrase[];
+  approval_required: string[];
+}
+
+export interface JobTemplate {
+  id: string;
+  label: string;
+  work_items: string[];
+  common_complaints: string[];
+  required_checks: string[];
+}
+
+export interface JobTypesResponse {
+  templates: JobTemplate[];
+  examples: Record<string, string>;
+}

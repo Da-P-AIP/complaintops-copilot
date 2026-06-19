@@ -1,4 +1,11 @@
-import type { AnalyzeResult, ComplaintCase, Session, ConversationEvent } from "@/lib/types";
+import type {
+  AnalyzeResult,
+  ComplaintCase,
+  Session,
+  ConversationEvent,
+  CompanyRules,
+  JobTypesResponse,
+} from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
@@ -18,6 +25,13 @@ export interface EventResult {
 }
 
 export const api = {
+  getJobTypes: () => req<JobTypesResponse>("/api/job-types"),
+  runSetupInterview: (business_type: string, text: string) =>
+    req<CompanyRules>("/api/setup/interview", {
+      method: "POST",
+      body: JSON.stringify({ business_type, text }),
+    }),
+  getActivePolicy: () => req<CompanyRules>("/api/setup/policies/active"),
   createCase: () => req<ComplaintCase>("/api/cases", { method: "POST", body: JSON.stringify({ business_type: "EC" }) }),
   startSession: (caseId: string) =>
     req<Session>(`/api/cases/${caseId}/sessions`, { method: "POST", body: JSON.stringify({ channel: "text" }) }),

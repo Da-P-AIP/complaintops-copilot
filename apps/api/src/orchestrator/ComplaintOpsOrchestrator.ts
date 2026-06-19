@@ -3,6 +3,7 @@ import { riskJudgeAgent } from "../agents/riskJudgeAgent";
 import { ruleAgent } from "../agents/ruleAgent";
 import { advisorAgent } from "../agents/advisorAgent";
 import { geminiAnalyze } from "../agents/geminiClient";
+import { getActivePolicy } from "../db/mockDb";
 
 const LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
 function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
@@ -12,7 +13,8 @@ function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
 /** 決定論的なモック判定（= 安全フロア。Geminiが見落としても過小判定しないための土台） */
 function mockAnalyze(text: string): AnalyzeResult {
   const risk = riskJudgeAgent(text);
-  const forbidden = ruleAgent(risk);
+  // 初期設定で生成した会社ルール(active policy)を反映
+  const forbidden = ruleAgent(risk, getActivePolicy());
   const advice = advisorAgent(text, risk, forbidden);
   return { ...risk, ...advice };
 }
