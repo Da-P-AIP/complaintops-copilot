@@ -7,6 +7,7 @@ import { ConversationLog } from "../../../../components/live/ConversationLog";
 import { ConversationInput } from "../../../../components/live/ConversationInput";
 import { RiskPanel } from "../../../../components/live/RiskPanel";
 import { AdvicePanel } from "../../../../components/live/AdvicePanel";
+import { ClosurePanel } from "../../../../components/live/ClosurePanel";
 
 export default function LivePage({ params }: { params: { caseId: string } }) {
   const { caseId } = params;
@@ -65,6 +66,8 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
         <RiskPanel analysis={analysis} />
         <AdvicePanel analysis={analysis} />
       </div>
+
+      <ClosurePanel caseId={caseId} />
     </div>
   );
 }

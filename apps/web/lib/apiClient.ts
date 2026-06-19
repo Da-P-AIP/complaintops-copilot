@@ -7,6 +7,9 @@ import type {
   JobTypesResponse,
   Scenario,
   InterviewOptions,
+  Report,
+  Resolutions,
+  ClosureResult,
 } from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
@@ -48,4 +51,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ text, speaker: "customer" }),
     }),
+  generateReport: (caseId: string) =>
+    req<Report>(`/api/cases/${caseId}/report`, { method: "POST", body: JSON.stringify({}) }),
+  updateResolution: (caseId: string, key: string, value: boolean) =>
+    req<Resolutions>(`/api/cases/${caseId}/resolutions`, { method: "POST", body: JSON.stringify({ key, value }) }),
+  getClosure: (caseId: string) => req<ClosureResult>(`/api/cases/${caseId}/closure`),
+  closeCase: (caseId: string) => req<{ status: string }>(`/api/cases/${caseId}/close`, { method: "POST", body: JSON.stringify({}) }),
 };

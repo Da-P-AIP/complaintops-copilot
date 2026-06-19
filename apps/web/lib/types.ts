@@ -127,3 +127,21 @@ export interface InterviewOptions {
   choices: string[];
   source: "gemini" | "deterministic";
 }
+
+export interface Report {
+  generated_at: string;
+  markdown: string;
+}
+
+export interface Resolutions {
+  supervisor_reported?: boolean;
+  approved?: boolean;
+  evidence_checked?: boolean;
+  customer_replied?: boolean;
+}
+
+export interface ClosureResult {
+  closure_status: "blocked" | "closeable";
+  blocking_reasons: string[];
+  required_actions: string[];
+}
