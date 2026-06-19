@@ -127,6 +127,14 @@ export interface JobTemplate {
   required_checks: string[];
 }
 
+// クレーム会話シミュレーション（練習モード）のシナリオ
+export interface Scenario {
+  id: string;
+  label: string;
+  industry: string;
+  lines: string[];
+}
+
 // 共通APIレスポンス（05 API仕様 3.4）
 export interface ApiOk<T> {
   ok: true;

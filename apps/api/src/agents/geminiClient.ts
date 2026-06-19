@@ -59,3 +59,37 @@ export async function geminiAnalyze(text: string): Promise<Partial<AnalyzeResult
     clearTimeout(timer);
   }
 }
+
+/**
+ * 初期設定ウィザードの選択肢を文脈に応じて生成する（AI動的選択肢生成の拡張枠）。
+ * 失敗時は呼び出し側が決定木のフォールバックを使う。
+ */
+export async function geminiChoices(question: string, context: string): Promise<string[]> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY not set");
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const prompt = `クレーム対応システムの初期設定です。次の質問に対する適切な選択肢を3〜5個、JSON配列(文字列のみ)で返してください。最後に必ず「その他」を含めること。質問: ${question}\nこれまでの回答(文脈): ${context}\n出力例: ["A","B","C","その他"]`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+    const data = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) throw new Error("Gemini empty response");
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map((x) => String(x)) : [];
+  } finally {
+    clearTimeout(timer);
+  }
+}

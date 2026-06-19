@@ -1,4 +1,4 @@
-import type { ForbiddenPhrase, CompanyRules, JobTemplate } from "../types";
+import type { ForbiddenPhrase, CompanyRules, JobTemplate, Scenario } from "../types";
 
 // 02 MVP仕様 8.6 / 15プロンプト.txt 期待出力に準拠した禁忌表現
 export const CORE_FORBIDDEN_PHRASES: ForbiddenPhrase[] = [
@@ -80,6 +80,60 @@ export const JOB_TEMPLATES: JobTemplate[] = [
     work_items: ["契約", "アカウント", "障害", "請求", "サポート履歴"],
     common_complaints: ["ログイン不可", "請求ミス", "障害", "データ消失", "サポート遅延"],
     required_checks: ["アカウントID", "契約プラン", "発生時刻", "エラーメッセージ", "操作ログ"],
+  },
+  {
+    id: "mfg",
+    label: "製造",
+    work_items: ["受注", "製造", "品質", "出荷", "保守"],
+    common_complaints: ["不良品", "納期遅延", "仕様相違", "数量不足", "対応遅れ"],
+    required_checks: ["注文番号/ロット", "製品名", "発生工程", "数量", "不具合写真"],
+  },
+];
+
+// 業種に応じた「形態」の選択肢（対話型ウィザードの動的分岐の決定木フォールバック）
+export const BUSINESS_FORMS: Record<string, string[]> = {
+  ec: ["アパレル", "食品", "家電・ガジェット", "雑貨・日用品", "その他"],
+  care: ["特養・老健", "デイサービス", "訪問介護", "障害福祉", "その他"],
+  food: ["レストラン", "カフェ", "居酒屋", "デリバリー", "その他"],
+  saas: ["業務SaaS(BtoB)", "個人向けアプリ", "決済・金融", "インフラ/API", "その他"],
+  mfg: ["BtoB部品メーカー", "消費財メーカー", "食品製造", "受託製造(OEM)", "その他"],
+};
+
+// 承認者・通知先の代表的な選択肢（決定木）
+export const APPROVER_OPTIONS = ["店長", "施設長", "管理者", "本部", "自分で判断", "その他"];
+export const NOTIFY_OPTIONS = ["本部に通知", "上長に通知", "通知しない", "その他"];
+
+// クレーム会話シミュレーション（簡易シナリオ）
+export const SCENARIOS: Scenario[] = [
+  {
+    id: "ec_damage",
+    label: "EC：破損＋SNS＋返金要求",
+    industry: "ec",
+    lines: [
+      "昨日届いた商品が壊れていました。",
+      "ちゃんと対応してくれないならSNSに書きますよ。",
+      "とにかく今すぐ全額返金してください。",
+    ],
+  },
+  {
+    id: "food_foreign",
+    label: "飲食：異物混入",
+    industry: "food",
+    lines: [
+      "料理に髪の毛が入っていたんですけど。",
+      "お店の衛生管理どうなってるんですか。",
+      "責任者を出してください。最悪なお店ですね。",
+    ],
+  },
+  {
+    id: "saas_outage",
+    label: "SaaS：障害＋法的示唆",
+    industry: "saas",
+    lines: [
+      "朝からログインできず、業務が止まっています。",
+      "これは損害賠償ものですよ。",
+      "場合によっては弁護士に相談します。",
+    ],
   },
 ];
 

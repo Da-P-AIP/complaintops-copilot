@@ -115,3 +115,15 @@ export interface JobTypesResponse {
   templates: JobTemplate[];
   examples: Record<string, string>;
 }
+
+export interface Scenario {
+  id: string;
+  label: string;
+  industry: string;
+  lines: string[];
+}
+
+export interface InterviewOptions {
+  choices: string[];
+  source: "gemini" | "deterministic";
+}

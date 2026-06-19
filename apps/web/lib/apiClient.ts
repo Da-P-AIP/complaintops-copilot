@@ -5,6 +5,8 @@ import type {
   ConversationEvent,
   CompanyRules,
   JobTypesResponse,
+  Scenario,
+  InterviewOptions,
 } from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
@@ -26,6 +28,12 @@ export interface EventResult {
 
 export const api = {
   getJobTypes: () => req<JobTypesResponse>("/api/job-types"),
+  getInterviewOptions: (questionId: string, answers: Record<string, string>) =>
+    req<InterviewOptions>("/api/setup/options", {
+      method: "POST",
+      body: JSON.stringify({ questionId, answers }),
+    }),
+  getSimulations: () => req<Scenario[]>("/api/simulations"),
   runSetupInterview: (business_type: string, text: string) =>
     req<CompanyRules>("/api/setup/interview", {
       method: "POST",
