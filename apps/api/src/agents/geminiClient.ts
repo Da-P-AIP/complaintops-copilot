@@ -79,3 +79,30 @@ export async function geminiChoices(question: string, context: string): Promise<
   const arr = JSON.parse(await callGemini(prompt, 10000));
   return Array.isArray(arr) ? arr.map((x) => String(x)) : [];
 }
+
+export interface GeminiRulesResult {
+  tone?: string;
+  approval_required?: string[];
+  forbidden_phrases?: { phrase: string; category: string; severity: string; reason: string }[];
+}
+
+/** 業種・会社に即した禁忌表現・承認条件・トーンを生成する。 */
+export async function geminiSetupRules(input: {
+  industry_label?: string;
+  company_name?: string;
+  text?: string;
+}): Promise<GeminiRulesResult> {
+  const prompt = `あなたはクレーム対応の業務設計AIです。次の会社情報から、その業種・会社に即した「禁忌表現（担当者が言ってはいけない言葉）」「人間承認が必要な操作」「対応トーン」を作ってください。
+# 会社情報
+業種: ${input.industry_label || "一般"}
+会社名: ${input.company_name || ""}
+説明: ${input.text || ""}
+# 指示
+- 禁忌表現は、その業種で実際に事故・炎上・苦情悪化につながりやすい具体的な言い回しを4〜6個。理由もその業種に即して。
+  例）介護・福祉なら「ご家族には黙っていてください」「うちの職員は悪くありません」「決まりですので無理です」等、その現場特有の地雷を。
+- category は refund_commitment / legal_responsibility / customer_action_restriction / dismissive / other のいずれか。
+- approval_required は、その会社で人間承認すべき操作（返金・補償・正式送信・法的判断など）。
+# 出力（JSONのみ。前後に文章を付けない）
+{"tone":"","approval_required":[],"forbidden_phrases":[{"phrase":"","category":"","severity":"low|medium|high","reason":""}]}`;
+  return JSON.parse(await callGemini(prompt)) as GeminiRulesResult;
+}

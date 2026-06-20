@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { JOB_TEMPLATES, SETUP_EXAMPLES, SCENARIOS } from "@complaintops/shared";
-import { setupAgent } from "../agents/setupAgent";
+import { buildCompanyRules } from "../agents/setupAgent";
 import { generateInterviewOptions } from "../agents/interviewAgent";
 import { getStore } from "../db/store";
 import { ok } from "../utils/response";
@@ -27,7 +27,7 @@ setupRouter.get("/simulations", (_req, res) => {
 // POST /api/setup/interview — 会社ルール生成→org配下に保存
 setupRouter.post("/setup/interview", async (req, res) => {
   const orgId = req.orgId || "org_001";
-  const rules = setupAgent({
+  const rules = await buildCompanyRules({
     business_type: req.body?.business_type,
     text: req.body?.text,
     company_name: req.body?.company_name,
