@@ -79,6 +79,19 @@ export interface Evaluation {
   comment: string;
 }
 
+// クレーム対応の型（4ステップ）の進捗
+export interface FlowStage {
+  key: string;
+  label: string;
+  done: boolean;
+}
+export interface FlowState {
+  stages: FlowStage[];
+  next_stage: string;
+  all_done: boolean;
+  resolved: boolean;
+}
+
 export interface Resolutions {
   supervisor_reported?: boolean;
   approved?: boolean;

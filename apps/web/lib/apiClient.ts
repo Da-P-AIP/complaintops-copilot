@@ -12,6 +12,7 @@ import type {
   ClosureResult,
   AuditEvent,
   Evaluation,
+  FlowState,
 } from "@/lib/types";
 import { getIdToken } from "@/lib/firebase";
 
@@ -36,6 +37,9 @@ export interface EventResult {
   event: ConversationEvent;
   analysis: AnalyzeResult | null;
   evaluation?: Evaluation | null;
+  flow?: FlowState;
+  resolved?: boolean;
+  source?: string;
 }
 
 export const api = {

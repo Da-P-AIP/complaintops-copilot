@@ -152,6 +152,9 @@ export interface Evaluation {
   comment: string;
 }
 
+export interface FlowStage { key: string; label: string; done: boolean; }
+export interface FlowState { stages: FlowStage[]; next_stage: string; all_done: boolean; resolved: boolean; }
+
 export interface ClosureResult {
   closure_status: "blocked" | "closeable";
   blocking_reasons: string[];

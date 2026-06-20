@@ -10,10 +10,10 @@ function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
   return LEVELS[Math.max(LEVELS.indexOf(a), LEVELS.indexOf(b))] ?? a;
 }
 
-function mockAnalyze(text: string, policy: CompanyRules): AnalyzeResult {
+function mockAnalyze(text: string, policy: CompanyRules, nextStage?: string): AnalyzeResult {
   const risk = riskJudgeAgent(text);
   const forbidden = ruleAgent(risk, policy);
-  const advice = advisorAgent(text, risk, forbidden, policy.industry_id);
+  const advice = advisorAgent(text, risk, forbidden, policy.industry_id, nextStage);
   return { ...risk, ...advice };
 }
 
@@ -33,8 +33,8 @@ function mergeForbidden(floor: ForbiddenPhrase[], extra: ForbiddenPhrase[]): For
  * ComplaintOps Orchestrator（ハイブリッド）。
  * 組織ごとの会社ルール(policy)を安全フロアとして使い、Gemini有効時は安全側マージ。
  */
-export async function analyzeUtterance(text: string, policy: CompanyRules = DEFAULT_COMPANY_RULES, history?: string): Promise<AnalyzeResult> {
-  const floor = mockAnalyze(text, policy);
+export async function analyzeUtterance(text: string, policy: CompanyRules = DEFAULT_COMPANY_RULES, history?: string, nextStage?: string): Promise<AnalyzeResult> {
+  const floor = mockAnalyze(text, policy, nextStage);
   if (process.env.AI_MODE !== "gemini" || !process.env.GEMINI_API_KEY) return floor;
   try {
     const g = await geminiAnalyze(text, history);

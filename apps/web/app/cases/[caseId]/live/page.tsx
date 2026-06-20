@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AnalyzeResult, ConversationEvent, CompanyRules, Evaluation } from "@/lib/types";
+import type { AnalyzeResult, ConversationEvent, CompanyRules, Evaluation, FlowState } from "@/lib/types";
 import { api } from "../../../../lib/apiClient";
 import { industryOf } from "@/lib/industry";
 import { ConversationLog } from "../../../../components/live/ConversationLog";
@@ -11,6 +11,7 @@ import { RiskPanel } from "../../../../components/live/RiskPanel";
 import { AdvicePanel } from "../../../../components/live/AdvicePanel";
 import { EvaluationPanel } from "../../../../components/live/EvaluationPanel";
 import { ImprovementPanel } from "../../../../components/live/ImprovementPanel";
+import { FlowPanel } from "../../../../components/live/FlowPanel";
 import { ClosurePanel } from "../../../../components/live/ClosurePanel";
 
 export default function LivePage({ params }: { params: { caseId: string } }) {
@@ -20,6 +21,7 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [policy, setPolicy] = useState<CompanyRules | null>(null);
+  const [flow, setFlow] = useState<FlowState | null>(null);
   const [caseNo, setCaseNo] = useState<number | undefined>(undefined);
   const [initialReport, setInitialReport] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -41,6 +43,7 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
       const result = await api.addEvent(sessionId, text);
       setEvents((prev) => [...prev, result.event]);
       if (result.analysis) setAnalysis(result.analysis);
+      if (result.flow) setFlow(result.flow);
     } catch (e) {
       setError(e instanceof Error ? e.message : "送信に失敗");
     } finally {
@@ -89,7 +92,10 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
           <OperatorInput onSend={onOperator} disabled={!sessionId || busy} />
           <ConversationLog events={events} />
         </div>
-        <RiskPanel analysis={analysis} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <RiskPanel analysis={analysis} />
+          <FlowPanel flow={flow} />
+        </div>
         <AdvicePanel analysis={analysis} />
       </div>
 

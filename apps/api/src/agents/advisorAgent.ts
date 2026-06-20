@@ -1,6 +1,5 @@
 import type { RiskResult, Advice, ForbiddenPhrase } from "@complaintops/shared";
 
-// 業種ごとの「事実確認の言い回し」と「次に確認すべき項目」
 const FACT_FINDING: Record<string, string> = {
   ec: "状況を正確に確認するため、注文番号と商品の状態（写真など）をご共有いただけますでしょうか。",
   care: "状況を正確に確認するため、発生した日時と、ご利用者様のお名前・担当職員を教えていただけますでしょうか。",
@@ -17,29 +16,43 @@ const NEXT_CONFIRM: Record<string, string[]> = {
   mfg: ["注文番号/ロットを確認", "不具合の状況（写真）を確認", "発生工程を確認"],
 };
 
-/**
- * Advisor Agent（モック版・業種対応）。
- * 業種(industryId)に応じた事実確認・次アクションを出す。
- */
+// クレーム対応の型(4ステップ)に応じた「今言うべきこと」
+const STAGE_SAY: Record<string, (fact: string) => string[]> = {
+  acknowledge: () => ["ご不快な思いをさせてしまい、申し訳ございません。", "まずは状況をしっかり伺わせてください。"],
+  factfind: (fact) => ["お話しいただきありがとうございます。", fact],
+  propose: () => [
+    "確認のうえ、交換・代替・再対応などで進めさせていただきます。",
+    "返金・補償が必要な場合は、上席の承認を得てから改めてご連絡いたします。",
+  ],
+  close: () => [
+    "ご不便をおかけし、申し訳ありませんでした。本件は記録し、再発防止に努めます。",
+    "他にご不明な点があれば、いつでもお申し付けください。",
+  ],
+};
+
+const STAGE_HINT: Record<string, string> = {
+  acknowledge: "まず謝罪・共感を示す",
+  factfind: "事実を具体的に確認する",
+  propose: "対応方針・代替案を提示する（確約はしない）",
+  close: "記録・再発防止を伝えて合意する",
+};
+
 export function advisorAgent(
   _text: string,
   risk: RiskResult,
   forbidden: ForbiddenPhrase[],
   industryId = "ec",
+  nextStage = "acknowledge",
 ): Advice {
   const ind = NEXT_CONFIRM[industryId] ? industryId : "ec";
-
-  const say: string[] = [
-    "ご不快な思いをさせてしまい申し訳ございません。",
-    FACT_FINDING[ind],
-    "確認後、担当者より対応方針をご案内いたします。",
-  ];
+  const stageFn = STAGE_SAY[nextStage] ?? STAGE_SAY.acknowledge;
+  const say = stageFn(FACT_FINDING[ind]);
 
   const next: string[] = [];
+  if (STAGE_HINT[nextStage]) next.push(`次のステップ: ${STAGE_HINT[nextStage]}`);
   if (
-    risk.detected_risks.includes("evidence_missing") ||
-    risk.detected_risks.includes("product_damage") ||
-    risk.risk_level !== "low"
+    nextStage === "factfind" &&
+    (risk.detected_risks.includes("evidence_missing") || risk.detected_risks.includes("product_damage") || risk.risk_level !== "low")
   ) {
     next.push(...NEXT_CONFIRM[ind]);
   }

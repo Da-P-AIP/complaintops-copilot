@@ -8,7 +8,8 @@ import { RiskPanel } from "../../components/live/RiskPanel";
 import { AdvicePanel } from "../../components/live/AdvicePanel";
 import { OperatorInput } from "../../components/live/OperatorInput";
 import { EvaluationPanel } from "../../components/live/EvaluationPanel";
-import type { Scenario, ConversationEvent, AnalyzeResult, Evaluation } from "@/lib/types";
+import { FlowPanel } from "../../components/live/FlowPanel";
+import type { Scenario, ConversationEvent, AnalyzeResult, Evaluation, FlowState } from "@/lib/types";
 
 export default function SimulatePage() {
   const [industryId, setIndustryId] = useState("ec");
@@ -19,6 +20,8 @@ export default function SimulatePage() {
   const [events, setEvents] = useState<ConversationEvent[]>([]);
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [flow, setFlow] = useState<FlowState | null>(null);
+  const [resolved, setResolved] = useState(false);
   const [free, setFree] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export default function SimulatePage() {
       const r = await api.addEvent(sid, text, industryId);
       setEvents((p) => [...p, r.event]);
       if (r.analysis) setAnalysis(r.analysis);
+      if (r.flow) setFlow(r.flow);
       setStarted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "送信に失敗");
@@ -64,6 +68,7 @@ export default function SimulatePage() {
       const r = await api.addOperatorEvent(sid, text);
       setEvents((p) => [...p, r.event]);
       if (r.evaluation) setEvaluation(r.evaluation);
+      if (r.flow) setFlow(r.flow);
     } catch (e) {
       setError(e instanceof Error ? e.message : "送信に失敗");
     } finally {
@@ -80,6 +85,8 @@ export default function SimulatePage() {
       const r = await api.customerTurn(sid, industryId, industry.label);
       setEvents((p) => [...p, r.event]);
       if (r.analysis) setAnalysis(r.analysis);
+      if (r.flow) setFlow(r.flow);
+      if (r.resolved) setResolved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "送信に失敗");
     } finally {
@@ -94,6 +101,8 @@ export default function SimulatePage() {
     setEvaluation(null);
     sessionRef.current = null;
     setStarted(false);
+    setFlow(null);
+    setResolved(false);
     await sendCustomer(s.lines[0]);
   };
   const sendFree = async () => {
@@ -152,7 +161,10 @@ export default function SimulatePage() {
           <ConversationLog events={events} />
         </div>
 
-        <RiskPanel analysis={analysis} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <RiskPanel analysis={analysis} />
+          <FlowPanel flow={flow} resolved={resolved} />
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <AdvicePanel analysis={analysis} />
