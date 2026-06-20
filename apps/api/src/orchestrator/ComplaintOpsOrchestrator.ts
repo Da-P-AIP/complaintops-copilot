@@ -1,20 +1,18 @@
-import type { AnalyzeResult, DetectedRisk, ForbiddenPhrase, RiskLevel } from "@complaintops/shared";
+import type { AnalyzeResult, DetectedRisk, ForbiddenPhrase, RiskLevel, CompanyRules } from "@complaintops/shared";
+import { DEFAULT_COMPANY_RULES } from "@complaintops/shared";
 import { riskJudgeAgent } from "../agents/riskJudgeAgent";
 import { ruleAgent } from "../agents/ruleAgent";
 import { advisorAgent } from "../agents/advisorAgent";
 import { geminiAnalyze } from "../agents/geminiClient";
-import { getActivePolicy } from "../db/mockDb";
 
 const LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
 function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
   return LEVELS[Math.max(LEVELS.indexOf(a), LEVELS.indexOf(b))] ?? a;
 }
 
-/** 決定論的なモック判定（= 安全フロア。Geminiが見落としても過小判定しないための土台） */
-function mockAnalyze(text: string): AnalyzeResult {
+function mockAnalyze(text: string, policy: CompanyRules): AnalyzeResult {
   const risk = riskJudgeAgent(text);
-  // 初期設定で生成した会社ルール(active policy)を反映
-  const forbidden = ruleAgent(risk, getActivePolicy());
+  const forbidden = ruleAgent(risk, policy);
   const advice = advisorAgent(text, risk, forbidden);
   return { ...risk, ...advice };
 }
@@ -32,18 +30,12 @@ function mergeForbidden(floor: ForbiddenPhrase[], extra: ForbiddenPhrase[]): For
 }
 
 /**
- * ComplaintOps Orchestrator（MVP / ハイブリッド）
- * Observe → Interpret → Constrain → Advise。
- * AI_MODE=gemini かつ APIキーがあれば Gemini を使い、モックの安全フロアと安全側マージする。
- * フラグはOR、リスクはunion、禁忌はフロアを必ず含む。失敗時はフロアへフォールバック（verify-before-trust）。
+ * ComplaintOps Orchestrator（ハイブリッド）。
+ * 組織ごとの会社ルール(policy)を安全フロアとして使い、Gemini有効時は安全側マージ。
  */
-export async function analyzeUtterance(text: string): Promise<AnalyzeResult> {
-  const floor = mockAnalyze(text);
-
-  if (process.env.AI_MODE !== "gemini" || !process.env.GEMINI_API_KEY) {
-    return floor;
-  }
-
+export async function analyzeUtterance(text: string, policy: CompanyRules = DEFAULT_COMPANY_RULES): Promise<AnalyzeResult> {
+  const floor = mockAnalyze(text, policy);
+  if (process.env.AI_MODE !== "gemini" || !process.env.GEMINI_API_KEY) return floor;
   try {
     const g = await geminiAnalyze(text);
     const detected = new Set<DetectedRisk>([
@@ -62,7 +54,6 @@ export async function analyzeUtterance(text: string): Promise<AnalyzeResult> {
       next_actions: g.next_actions && g.next_actions.length > 0 ? g.next_actions : floor.next_actions,
     };
   } catch {
-    // Geminiが落ちても対応は止めない。決定論的な安全フロアを返す。
     return floor;
   }
 }

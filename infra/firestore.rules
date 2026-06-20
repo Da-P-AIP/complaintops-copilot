@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// ComplaintOps Copilot — テナント分離ルール
+// 各組織は「自分の組織(org_id == 認証uid)」のドキュメントだけ読み書き可能。
+// ※ API は Admin SDK 経由（このルールをバイパス）。これは直接アクセスへの防御壁。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /organizations/{orgId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == orgId;
+    }
+    // それ以外は全拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

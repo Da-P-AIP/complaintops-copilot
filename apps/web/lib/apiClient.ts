@@ -11,13 +11,19 @@ import type {
   Resolutions,
   ClosureResult,
 } from "@/lib/types";
+import { getIdToken } from "@/lib/firebase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getIdToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers || {}),
+    },
   });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error?.message || "APIエラー");
@@ -32,25 +38,16 @@ export interface EventResult {
 export const api = {
   getJobTypes: () => req<JobTypesResponse>("/api/job-types"),
   getInterviewOptions: (questionId: string, answers: Record<string, string>) =>
-    req<InterviewOptions>("/api/setup/options", {
-      method: "POST",
-      body: JSON.stringify({ questionId, answers }),
-    }),
+    req<InterviewOptions>("/api/setup/options", { method: "POST", body: JSON.stringify({ questionId, answers }) }),
   getSimulations: () => req<Scenario[]>("/api/simulations"),
   runSetupInterview: (business_type: string, text: string) =>
-    req<CompanyRules>("/api/setup/interview", {
-      method: "POST",
-      body: JSON.stringify({ business_type, text }),
-    }),
+    req<CompanyRules>("/api/setup/interview", { method: "POST", body: JSON.stringify({ business_type, text }) }),
   getActivePolicy: () => req<CompanyRules>("/api/setup/policies/active"),
   createCase: () => req<ComplaintCase>("/api/cases", { method: "POST", body: JSON.stringify({ business_type: "EC" }) }),
   startSession: (caseId: string) =>
     req<Session>(`/api/cases/${caseId}/sessions`, { method: "POST", body: JSON.stringify({ channel: "text" }) }),
   addEvent: (sessionId: string, text: string) =>
-    req<EventResult>(`/api/sessions/${sessionId}/events`, {
-      method: "POST",
-      body: JSON.stringify({ text, speaker: "customer" }),
-    }),
+    req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "customer" }) }),
   generateReport: (caseId: string) =>
     req<Report>(`/api/cases/${caseId}/report`, { method: "POST", body: JSON.stringify({}) }),
   updateResolution: (caseId: string, key: string, value: boolean) =>
