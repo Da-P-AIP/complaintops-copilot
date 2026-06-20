@@ -52,8 +52,8 @@ export const api = {
   startSession: (caseId: string) =>
     req<Session>(`/api/cases/${caseId}/sessions`, { method: "POST", body: JSON.stringify({ channel: "text" }) }),
   getCase: (caseId: string) => req<ComplaintCase>(`/api/cases/${caseId}`),
-  addEvent: (sessionId: string, text: string) =>
-    req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "customer" }) }),
+  addEvent: (sessionId: string, text: string, industryId?: string) =>
+    req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "customer", ...(industryId ? { industry_id: industryId } : {}) }) }),
   addOperatorEvent: (sessionId: string, text: string) =>
     req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "operator" }) }),
   saveReport: (caseId: string, markdown: string) =>

@@ -31,7 +31,9 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
   let analysis: AnalyzeResult | null = null;
   let evaluation: Evaluation | null = null;
   if (speaker === "customer") {
-    const policy = await store.getPolicy(orgId);
+    const basePolicy = await store.getPolicy(orgId);
+    const overrideInd = (req.body?.industry_id ?? "").toString();
+    const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
     analysis = await analyzeUtterance(text, policy);
     await store.patchCase(orgId, s.case_id, {
       latest_risk: {

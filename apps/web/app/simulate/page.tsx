@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../lib/apiClient";
 import { INDUSTRIES, industryOf } from "@/lib/industry";
 import { ConversationLog } from "../../components/live/ConversationLog";
 import { RiskPanel } from "../../components/live/RiskPanel";
 import { AdvicePanel } from "../../components/live/AdvicePanel";
-import type { Scenario, ConversationEvent, AnalyzeResult } from "@/lib/types";
+import { OperatorInput } from "../../components/live/OperatorInput";
+import { EvaluationPanel } from "../../components/live/EvaluationPanel";
+import type { Scenario, ConversationEvent, AnalyzeResult, Evaluation } from "@/lib/types";
 
 export default function SimulatePage() {
   const [industryId, setIndustryId] = useState("ec");
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [scenario, setScenario] = useState<Scenario | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionRef = useRef<string | null>(null);
   const [lineIdx, setLineIdx] = useState(0);
+  const lineIdxRef = useRef(0);
   const [events, setEvents] = useState<ConversationEvent[]>([]);
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [free, setFree] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,10 +32,10 @@ export default function SimulatePage() {
   const filtered = scenarios.filter((s) => s.industry === industryId);
 
   const ensureSession = async (): Promise<string | null> => {
-    if (sessionId) return sessionId;
+    if (sessionRef.current) return sessionRef.current;
     const c = await api.createCase();
     const s = await api.startSession(c.id);
-    setSessionId(s.id);
+    sessionRef.current = s.id;
     return s.id;
   };
 
@@ -41,7 +45,7 @@ export default function SimulatePage() {
     try {
       const sid = await ensureSession();
       if (!sid) return;
-      const r = await api.addEvent(sid, text);
+      const r = await api.addEvent(sid, text, industryId);
       setEvents((p) => [...p, r.event]);
       if (r.analysis) setAnalysis(r.analysis);
     } catch (e) {
@@ -51,25 +55,47 @@ export default function SimulatePage() {
     }
   };
 
+  const sendOperator = async (text: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const sid = await ensureSession();
+      if (!sid) return;
+      const r = await api.addOperatorEvent(sid, text);
+      setEvents((p) => [...p, r.event]);
+      if (r.evaluation) setEvaluation(r.evaluation);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "送信に失敗");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const playLine = async (s: Scenario, idx: number) => {
     if (idx >= s.lines.length) return;
-    await sendCustomer(s.lines[idx]);
+    lineIdxRef.current = idx + 1;
     setLineIdx(idx + 1);
+    await sendCustomer(s.lines[idx]);
   };
   const pickScenario = async (s: Scenario) => {
     setScenario(s);
+    lineIdxRef.current = 0;
     setLineIdx(0);
     setEvents([]);
     setAnalysis(null);
+    setEvaluation(null);
     await playLine(s, 0);
   };
   const nextLine = async () => {
     if (!scenario) return;
-    await playLine(scenario, lineIdx);
+    await playLine(scenario, lineIdxRef.current);
   };
-  const sendFree = async () => { const t = free.trim(); if (!t) return; await sendCustomer(t); setFree(""); };
-  const pickReply = (text: string) =>
-    setEvents((p) => [...p, { id: `op_${Date.now()}`, session_id: sessionId ?? "", case_id: "", speaker: "operator", text, created_at: new Date().toISOString() }]);
+  const sendFree = async () => {
+    const t = free.trim();
+    if (!t) return;
+    await sendCustomer(t);
+    setFree("");
+  };
 
   const done = scenario ? lineIdx >= scenario.lines.length : false;
 
@@ -77,7 +103,7 @@ export default function SimulatePage() {
     <div className="container" style={{ "--accent": industry.color } as React.CSSProperties}>
       <h2 style={{ marginBottom: 4 }}>クレーム会話シミュレーション（練習モード）</h2>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        AIがクレーム客を演じます。業種を選んで、シナリオ再生 or 自分でクレームを入力して、安全な対応を練習できます。
+        業種を選んで、シナリオ再生 or 自分でクレームを入力 → AI判定を見て、あなたの返答を入力・選択すると評価されます。
       </p>
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
 
@@ -95,7 +121,7 @@ export default function SimulatePage() {
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
-        <p className="section-title">自分でクレームを入力（{industry.icon} {industry.label}）</p>
+        <p className="section-title">クレーム客の発話を自分で入力（{industry.icon} {industry.label}）</p>
         <div className="input-row">
           <input className="text-input" value={free} placeholder="クレーム客のセリフを入力…" onChange={(e) => setFree(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendFree()} disabled={busy} />
           <button className="btn" onClick={sendFree} disabled={busy || !free.trim()}>送信して判定</button>
@@ -115,24 +141,28 @@ export default function SimulatePage() {
             {!scenario ? (
               <p className="hint">シナリオを選ぶか、上の自由入力で開始できます。</p>
             ) : !done ? (
-              <button className="btn" onClick={nextLine} disabled={busy}>{lineIdx === 0 ? "クレーム客の発話を再生 ▶" : `次の発話を再生（${lineIdx}/${scenario.lines.length}）▶`}</button>
+              <button className="btn" onClick={nextLine} disabled={busy}>{`次のクレーム発話（${lineIdx}/${scenario.lines.length}）▶`}</button>
             ) : (
               <p style={{ color: "var(--ok)" }}>シナリオ完了。落ち着いて対応できましたか？</p>
             )}
           </div>
           <ConversationLog events={events} />
         </div>
+
         <RiskPanel analysis={analysis} />
+
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <AdvicePanel analysis={analysis} />
+          <OperatorInput onSend={sendOperator} disabled={busy} />
           {analysis && analysis.say_this.length > 0 && (
             <div className="card">
-              <p className="section-title">推奨返答を選ぶ（タップで担当者の発話に）</p>
+              <p className="section-title">推奨返答から選ぶ（タップで記録＆評価）</p>
               <div className="choices" style={{ flexDirection: "column" }}>
-                {analysis.say_this.map((s, i) => (<button key={i} className="choice reply" onClick={() => pickReply(s)}>{s}</button>))}
+                {analysis.say_this.map((s, i) => (<button key={i} className="choice reply" onClick={() => sendOperator(s)} disabled={busy}>{s}</button>))}
               </div>
             </div>
           )}
+          <EvaluationPanel evaluation={evaluation} />
         </div>
       </div>
     </div>
