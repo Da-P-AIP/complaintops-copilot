@@ -51,11 +51,21 @@ export default function SimulatePage() {
     }
   };
 
-  const pickScenario = (s: Scenario) => { setScenario(s); setLineIdx(0); };
+  const playLine = async (s: Scenario, idx: number) => {
+    if (idx >= s.lines.length) return;
+    await sendCustomer(s.lines[idx]);
+    setLineIdx(idx + 1);
+  };
+  const pickScenario = async (s: Scenario) => {
+    setScenario(s);
+    setLineIdx(0);
+    setEvents([]);
+    setAnalysis(null);
+    await playLine(s, 0);
+  };
   const nextLine = async () => {
-    if (!scenario || lineIdx >= scenario.lines.length) return;
-    await sendCustomer(scenario.lines[lineIdx]);
-    setLineIdx((i) => i + 1);
+    if (!scenario) return;
+    await playLine(scenario, lineIdx);
   };
   const sendFree = async () => { const t = free.trim(); if (!t) return; await sendCustomer(t); setFree(""); };
   const pickReply = (text: string) =>

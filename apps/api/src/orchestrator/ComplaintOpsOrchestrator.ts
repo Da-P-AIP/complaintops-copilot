@@ -13,7 +13,7 @@ function maxLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
 function mockAnalyze(text: string, policy: CompanyRules): AnalyzeResult {
   const risk = riskJudgeAgent(text);
   const forbidden = ruleAgent(risk, policy);
-  const advice = advisorAgent(text, risk, forbidden);
+  const advice = advisorAgent(text, risk, forbidden, policy.industry_id);
   return { ...risk, ...advice };
 }
 
