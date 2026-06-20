@@ -95,6 +95,28 @@ export default function SettingsPage() {
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>
+        <p className="section-title">セキュリティとデータ保護</p>
+        <p className="hint" style={{ marginTop: 0 }}>会社ごとにデータを分離し、安全設計で情報漏えいリスクを低減しています。</p>
+        {[
+          { t: "🔐 組織ごとのデータ分離（マルチテナント）", d: "Firebase認証で組織を識別し、自分の組織のデータにのみアクセスできます。" },
+          { t: "🪪 サーバー側でのトークン検証", d: "APIがIDトークンをサーバーで検証して組織を確定。なりすましを防ぎます。" },
+          { t: "🗄 Googleインフラに暗号化保存", d: "Firestoreに保管時暗号化で保存。セキュリティルールで他組織からのアクセスを遮断。" },
+          { t: "✋ 危険操作は人間承認", d: "返金・法的責任・正式送信などは自動実行せず承認制。" },
+          { t: "🔗 改ざん検知できる監査ログ", d: "AI判断と操作をハッシュチェーンで記録し、説明責任を担保。" },
+        ].map((s) => (
+          <div className="toggle" key={s.t}>
+            <div className="label">
+              <span className="t">{s.t}</span>
+              <div className="d">{s.d}</div>
+            </div>
+          </div>
+        ))}
+        <p className="hint" style={{ marginTop: 10 }}>
+          ※ 現在はブラウザ単位の匿名認証による分離です。実名アカウント・複数端末での共有は、Googleログイン対応で拡張できます。
+        </p>
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
         <p className="section-title">拡張オプション（今後）</p>
         <p className="hint" style={{ marginTop: 0 }}>
           設計済みの拡張ポイント。MCP Tool Hub / Firestore / Gemini Live で段階的に有効化できます。
