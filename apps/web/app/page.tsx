@@ -43,6 +43,23 @@ export default function Home() {
         {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
       </section>
 
+      <Link
+        href="/security"
+        className="card"
+        style={{ display: "block", marginTop: 18, borderColor: "var(--ok)", background: "linear-gradient(180deg, rgba(52,211,153,0.10), var(--bg-2))" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 26 }}>🔐</span>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 800 }}>組織ごとにデータを分離。安心して使えます。</div>
+            <div style={{ color: "var(--muted)", fontSize: 14 }}>
+              テナント分離・人間承認・改ざん検知の監査ログ。安全設計の仕組みはこちら。
+            </div>
+          </div>
+          <span style={{ color: "var(--ok)", fontWeight: 700, whiteSpace: "nowrap" }}>仕組みを見る →</span>
+        </div>
+      </Link>
+
       {/* 2つの入口：使う（本番） / 練習する */}
       <section className="grid-2" style={{ marginTop: 8 }}>
         <div className="card">
