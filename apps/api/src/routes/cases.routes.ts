@@ -54,6 +54,19 @@ casesRouter.post("/:caseId/report", async (req, res) => {
   ok(res, report, 201);
 });
 
+// POST /api/cases/:caseId/report/save — 編集した報告書を保存（再編集可能な書類）
+casesRouter.post("/:caseId/report/save", async (req, res) => {
+  const orgId = req.orgId || "org_001";
+  const store = getStore();
+  const c = await store.getCase(orgId, req.params.caseId);
+  if (!c) return fail(res, "NOT_FOUND", "案件が見つかりません", 404);
+  const markdown = (req.body?.markdown ?? "").toString();
+  if (!markdown.trim()) return fail(res, "VALIDATION_ERROR", "markdown は必須です");
+  await store.patchCase(orgId, c.id, { report: { generated_at: new Date().toISOString(), markdown } });
+  await store.appendAudit(orgId, { case_id: c.id, actor: "operator", action: "report.save", detail: {} });
+  ok(res, { saved: true });
+});
+
 // POST /api/cases/:caseId/resolutions
 casesRouter.post("/:caseId/resolutions", async (req, res) => {
   const orgId = req.orgId || "org_001";

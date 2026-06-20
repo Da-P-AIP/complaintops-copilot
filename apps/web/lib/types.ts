@@ -78,6 +78,9 @@ export interface ComplaintCase {
   created_at: string;
   updated_at: string;
   latest_risk?: RiskResult;
+  report?: Report;
+  resolutions?: Resolutions;
+  case_no?: number;
 }
 
 export interface Session {
@@ -141,6 +144,12 @@ export interface Resolutions {
   approved?: boolean;
   evidence_checked?: boolean;
   customer_replied?: boolean;
+}
+
+export interface Evaluation {
+  status: "ok" | "caution";
+  issues: string[];
+  comment: string;
 }
 
 export interface ClosureResult {

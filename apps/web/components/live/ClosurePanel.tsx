@@ -11,18 +11,22 @@ const RES_ITEMS: { key: keyof Resolutions; label: string }[] = [
   { key: "customer_replied", label: "顧客へ返信した" },
 ];
 
-export function ClosurePanel({ caseId }: { caseId: string }) {
-  const [report, setReport] = useState<string | null>(null);
+export function ClosurePanel({ caseId, initialReport }: { caseId: string; initialReport?: string }) {
+  const [report, setReport] = useState<string>(initialReport ?? "");
   const [res, setRes] = useState<Resolutions>({});
   const [closure, setClosure] = useState<ClosureResult | null>(null);
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
 
   const refresh = () => api.getClosure(caseId).then(setClosure).catch(() => {});
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
+  useEffect(() => {
+    if (initialReport) setReport(initialReport);
+  }, [initialReport]);
 
   const genReport = async () => {
     setBusy(true);
@@ -30,6 +34,21 @@ export function ClosurePanel({ caseId }: { caseId: string }) {
       const r = await api.generateReport(caseId);
       setReport(r.markdown);
       await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveReport = async () => {
+    if (!report.trim()) return;
+    setBusy(true);
+    try {
+      await api.saveReport(caseId, report);
+      setSavedMsg("保存しました ✓");
+      setTimeout(() => setSavedMsg(""), 2500);
+      await refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "保存に失敗");
     } finally {
       setBusy(false);
     }
@@ -56,14 +75,22 @@ export function ClosurePanel({ caseId }: { caseId: string }) {
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <p className="section-title">対応を閉じる（クローズゲート）</p>
+      <p className="section-title">報告書（編集して保存できる書類）＆クローズ</p>
 
       <div className="grid-2">
         <div>
-          <button className="btn sm" onClick={genReport} disabled={busy}>
-            {report ? "報告書を再生成" : "報告書を生成"}
-          </button>
-          {report && <pre className="code" style={{ marginTop: 10, maxHeight: 240, overflow: "auto" }}>{report}</pre>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button className="btn sm" onClick={genReport} disabled={busy}>{report ? "下書きを再生成" : "報告書を生成"}</button>
+            <button className="btn sm ghost" onClick={saveReport} disabled={busy || !report.trim()}>保存</button>
+            {savedMsg && <span className="hint" style={{ color: "var(--ok)" }}>{savedMsg}</span>}
+          </div>
+          <textarea
+            className="text-input"
+            style={{ marginTop: 10, minHeight: 260, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
+            value={report}
+            onChange={(e) => setReport(e.target.value)}
+            placeholder="「報告書を生成」で下書きが入ります。担当者の対応や評価・改善点を自由に追記して「保存」してください。"
+          />
         </div>
 
         <div>

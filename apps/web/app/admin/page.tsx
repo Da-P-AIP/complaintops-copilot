@@ -63,8 +63,8 @@ export default function AdminPage() {
               {c.latest_risk ? <RiskBadge level={c.latest_risk.risk_level} /> : <span className="tag">未判定</span>}
             </span>
             <span className="grow">
-              <strong>{c.id}</strong>{" "}
-              <span className="hint">{STATUS_JP[c.status] ?? c.status}・{new Date(c.updated_at).toLocaleString("ja-JP")}</span>
+              <strong>クレーム No.{c.case_no ?? "—"}</strong>{" "}
+              <span className="hint">{STATUS_JP[c.status] ?? c.status}・{new Date(c.updated_at).toLocaleString("ja-JP")}{c.report ? "・報告書あり" : ""}</span>
             </span>
             <Link className="btn ghost sm" href={`/cases/${c.id}/live`}>開く</Link>
           </div>

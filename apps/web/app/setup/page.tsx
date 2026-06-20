@@ -132,7 +132,13 @@ export default function SetupPage() {
     await loadOptions(QUESTIONS[pi], industry);
   };
 
-  const toggleMic = () => (listening ? stop() : start((t) => setFree(t)));
+  const toggleMic = () => {
+    if (!supported) {
+      if (typeof window !== "undefined") window.alert("音声入力は Chrome / Edge でご利用いただけます。");
+      return;
+    }
+    listening ? stop() : start((t) => setFree(t));
+  };
   const toggleMulti = (c: string) => setMulti((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
 
   const progress = phase === "industry" ? 0 : phase === "review" ? QUESTIONS.length + 1 : idx + 1;
@@ -207,11 +213,15 @@ export default function SetupPage() {
               onChange={(e) => setFree(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && free.trim() && goNext(free.trim())}
             />
-            {supported && (
-              <button className={`mic-btn${listening ? " listening" : ""}`} onClick={toggleMic} title="音声入力">
-                {listening ? "■" : "🎙"}
-              </button>
-            )}
+            <button
+              className={`mic-btn${listening ? " listening" : ""}`}
+              onClick={toggleMic}
+              title={supported ? "音声入力" : "この環境は音声非対応（Chrome/Edge推奨）"}
+              aria-label="音声入力"
+              style={!supported ? { opacity: 0.5 } : undefined}
+            >
+              {listening ? "■" : "🎙"}
+            </button>
             {(q.kind === "free" || q.kind === "single") && (
               <button className="btn" onClick={() => free.trim() && goNext(free.trim())} disabled={!free.trim()}>次へ</button>
             )}

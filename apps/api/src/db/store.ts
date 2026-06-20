@@ -71,6 +71,7 @@ interface OrgData {
   events: ConversationEvent[];
   audit: AuditEvent[];
   policy: CompanyRules;
+  caseSeq: number;
 }
 
 class MemoryStore implements Store {
@@ -78,14 +79,17 @@ class MemoryStore implements Store {
   private org(orgId: string): OrgData {
     let o = this.orgs.get(orgId);
     if (!o) {
-      o = { cases: new Map(), sessions: new Map(), events: [], audit: [], policy: DEFAULT_COMPANY_RULES };
+      o = { cases: new Map(), sessions: new Map(), events: [], audit: [], policy: DEFAULT_COMPANY_RULES, caseSeq: 0 };
       this.orgs.set(orgId, o);
     }
     return o;
   }
   async createCase(orgId: string, input: Partial<ComplaintCase>) {
+    const o = this.org(orgId);
+    o.caseSeq += 1;
     const c = newCase(orgId, input);
-    this.org(orgId).cases.set(c.id, c);
+    c.case_no = o.caseSeq;
+    o.cases.set(c.id, c);
     return c;
   }
   async getCase(orgId: string, caseId: string) {
@@ -143,8 +147,15 @@ class FirestoreStore implements Store {
     return this.fs.collection("organizations").doc(orgId);
   }
   async createCase(orgId: string, input: Partial<ComplaintCase>) {
+    const orgRef = this.org(orgId);
     const c = newCase(orgId, input);
-    await this.org(orgId).collection("cases").doc(c.id).set(c);
+    c.case_no = await this.fs.runTransaction(async (tx) => {
+      const d = await tx.get(orgRef);
+      const cur = ((d.data() as { case_seq?: number } | undefined)?.case_seq ?? 0) + 1;
+      tx.set(orgRef, { case_seq: cur }, { merge: true });
+      return cur;
+    });
+    await orgRef.collection("cases").doc(c.id).set(c);
     return c;
   }
   async getCase(orgId: string, caseId: string) {

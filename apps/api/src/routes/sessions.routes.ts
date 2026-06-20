@@ -1,8 +1,9 @@
 import { Router } from "express";
-import type { ConversationEvent, Speaker, AnalyzeResult } from "@complaintops/shared";
+import type { ConversationEvent, Speaker, AnalyzeResult, Evaluation } from "@complaintops/shared";
 import { getStore, genId } from "../db/store";
 import { ok, fail } from "../utils/response";
 import { analyzeUtterance } from "../orchestrator/ComplaintOpsOrchestrator";
+import { evaluateAgent } from "../agents/evaluateAgent";
 
 export const sessionsRouter = Router();
 
@@ -28,6 +29,7 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
   await store.addEvent(orgId, ev);
 
   let analysis: AnalyzeResult | null = null;
+  let evaluation: Evaluation | null = null;
   if (speaker === "customer") {
     const policy = await store.getPolicy(orgId);
     analysis = await analyzeUtterance(text, policy);
@@ -48,8 +50,17 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
       action: "ai.analyze",
       detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks },
     });
+  } else if (speaker === "operator") {
+    const policy = await store.getPolicy(orgId);
+    evaluation = evaluateAgent(text, policy);
+    await store.appendAudit(orgId, {
+      case_id: s.case_id,
+      actor: "ai",
+      action: "operator.evaluate",
+      detail: { status: evaluation.status, issues: evaluation.issues.length },
+    });
   }
   await store.appendAudit(orgId, { case_id: s.case_id, actor: speaker, action: "conversation.add", detail: { event_id: ev.id } });
 
-  ok(res, { event: ev, analysis }, 201);
+  ok(res, { event: ev, analysis, evaluation }, 201);
 });

@@ -29,7 +29,13 @@ export function ConversationInput({
     setText("");
   };
 
-  const toggleMic = () => (listening ? stop() : start((t) => setText(t)));
+  const micClick = () => {
+    if (!supported) {
+      if (typeof window !== "undefined") window.alert("音声入力は Chrome / Edge でご利用いただけます。");
+      return;
+    }
+    listening ? stop() : start((t) => setText(t));
+  };
 
   return (
     <div className="card">
@@ -43,11 +49,17 @@ export function ConversationInput({
           onKeyDown={(e) => e.key === "Enter" && send()}
           disabled={disabled}
         />
-        {supported && (
-          <button type="button" className={`mic-btn${listening ? " listening" : ""}`} onClick={toggleMic} disabled={disabled} title={listening ? "停止" : "音声入力"} aria-label="音声入力">
-            {listening ? "■" : "🎙"}
-          </button>
-        )}
+        <button
+          type="button"
+          className={`mic-btn${listening ? " listening" : ""}`}
+          onClick={micClick}
+          disabled={disabled}
+          title={supported ? (listening ? "停止" : "音声入力") : "この環境は音声非対応（Chrome/Edge推奨）"}
+          aria-label="音声入力"
+          style={!supported ? { opacity: 0.5 } : undefined}
+        >
+          {listening ? "■" : "🎙"}
+        </button>
       </div>
       <div className="input-actions">
         <button className="btn" onClick={send} disabled={disabled}>送信して判定</button>
@@ -57,10 +69,12 @@ export function ConversationInput({
           <span className="hint">※ 音声入力はChrome/Edge推奨</span>
         )}
       </div>
-      <div className="samples">
-        <span className="hint">サンプル:</span>
+      <div className="samples" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+        <span className="hint">サンプル発話（クリックで入力）:</span>
         {list.map((s, i) => (
-          <button key={i} className="chip" onClick={() => setText(s)}>例{i + 1}</button>
+          <button key={i} className="chip reply" title={s} onClick={() => setText(s)} style={{ textAlign: "left", whiteSpace: "normal" }}>
+            {s}
+          </button>
         ))}
       </div>
     </div>

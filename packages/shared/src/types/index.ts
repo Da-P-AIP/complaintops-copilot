@@ -73,6 +73,12 @@ export interface Report {
   markdown: string;
 }
 
+export interface Evaluation {
+  status: "ok" | "caution";
+  issues: string[];
+  comment: string;
+}
+
 export interface Resolutions {
   supervisor_reported?: boolean;
   approved?: boolean;
@@ -100,6 +106,7 @@ export interface ComplaintCase {
   latest_risk?: RiskResult;
   report?: Report;
   resolutions?: Resolutions;
+  case_no?: number;
 }
 
 export interface Session {

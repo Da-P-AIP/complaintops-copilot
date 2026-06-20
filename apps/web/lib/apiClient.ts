@@ -11,6 +11,7 @@ import type {
   Resolutions,
   ClosureResult,
   AuditEvent,
+  Evaluation,
 } from "@/lib/types";
 import { getIdToken } from "@/lib/firebase";
 
@@ -34,6 +35,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export interface EventResult {
   event: ConversationEvent;
   analysis: AnalyzeResult | null;
+  evaluation?: Evaluation | null;
 }
 
 export const api = {
@@ -49,8 +51,13 @@ export const api = {
   createCase: () => req<ComplaintCase>("/api/cases", { method: "POST", body: JSON.stringify({ business_type: "EC" }) }),
   startSession: (caseId: string) =>
     req<Session>(`/api/cases/${caseId}/sessions`, { method: "POST", body: JSON.stringify({ channel: "text" }) }),
+  getCase: (caseId: string) => req<ComplaintCase>(`/api/cases/${caseId}`),
   addEvent: (sessionId: string, text: string) =>
     req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "customer" }) }),
+  addOperatorEvent: (sessionId: string, text: string) =>
+    req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "operator" }) }),
+  saveReport: (caseId: string, markdown: string) =>
+    req<{ saved: boolean }>(`/api/cases/${caseId}/report/save`, { method: "POST", body: JSON.stringify({ markdown }) }),
   generateReport: (caseId: string) =>
     req<Report>(`/api/cases/${caseId}/report`, { method: "POST", body: JSON.stringify({}) }),
   updateResolution: (caseId: string, key: string, value: boolean) =>
