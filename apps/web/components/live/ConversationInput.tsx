@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSpeechRecognition } from "@/lib/useSpeechRecognition";
 
-const SAMPLES = [
+const DEFAULT_SAMPLES = [
   "壊れた商品が届きました。こんな対応ならSNSに書きます。ちゃんと返金してください。",
   "予約した時間に席が用意されていませんでした。",
   "弁護士に相談して訴えます。",
@@ -12,12 +12,15 @@ const SAMPLES = [
 export function ConversationInput({
   onSend,
   disabled,
+  samples,
 }: {
   onSend: (text: string) => void;
   disabled?: boolean;
+  samples?: string[];
 }) {
   const [text, setText] = useState("");
   const { supported, listening, start, stop } = useSpeechRecognition("ja-JP");
+  const list = samples && samples.length > 0 ? samples : DEFAULT_SAMPLES;
 
   const send = () => {
     const t = text.trim();
@@ -26,10 +29,7 @@ export function ConversationInput({
     setText("");
   };
 
-  const toggleMic = () => {
-    if (listening) stop();
-    else start((t) => setText(t));
-  };
+  const toggleMic = () => (listening ? stop() : start((t) => setText(t)));
 
   return (
     <div className="card">
@@ -44,22 +44,13 @@ export function ConversationInput({
           disabled={disabled}
         />
         {supported && (
-          <button
-            type="button"
-            className={`mic-btn${listening ? " listening" : ""}`}
-            onClick={toggleMic}
-            disabled={disabled}
-            title={listening ? "停止" : "音声入力"}
-            aria-label="音声入力"
-          >
+          <button type="button" className={`mic-btn${listening ? " listening" : ""}`} onClick={toggleMic} disabled={disabled} title={listening ? "停止" : "音声入力"} aria-label="音声入力">
             {listening ? "■" : "🎙"}
           </button>
         )}
       </div>
       <div className="input-actions">
-        <button className="btn" onClick={send} disabled={disabled}>
-          送信して判定
-        </button>
+        <button className="btn" onClick={send} disabled={disabled}>送信して判定</button>
         {supported ? (
           <span className="hint">🎙 マイクで音声入力できます（{listening ? "認識中…" : "ja-JP"}）</span>
         ) : (
@@ -68,10 +59,8 @@ export function ConversationInput({
       </div>
       <div className="samples">
         <span className="hint">サンプル:</span>
-        {SAMPLES.map((s, i) => (
-          <button key={i} className="chip" onClick={() => setText(s)}>
-            例{i + 1}
-          </button>
+        {list.map((s, i) => (
+          <button key={i} className="chip" onClick={() => setText(s)}>例{i + 1}</button>
         ))}
       </div>
     </div>

@@ -12,6 +12,7 @@ export function Header() {
           <Link href="/">ホーム</Link>
           <Link href="/setup">初期設定</Link>
           <Link href="/simulate">練習</Link>
+          <Link href="/admin">管理</Link>
           <Link href="/security">安全性</Link>
           <Link href="/settings">設定</Link>
         </nav>

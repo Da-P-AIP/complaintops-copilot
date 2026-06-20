@@ -10,6 +10,7 @@ import type {
   Report,
   Resolutions,
   ClosureResult,
+  AuditEvent,
 } from "@/lib/types";
 import { getIdToken } from "@/lib/firebase";
 
@@ -40,9 +41,11 @@ export const api = {
   getInterviewOptions: (questionId: string, answers: Record<string, string>) =>
     req<InterviewOptions>("/api/setup/options", { method: "POST", body: JSON.stringify({ questionId, answers }) }),
   getSimulations: () => req<Scenario[]>("/api/simulations"),
-  runSetupInterview: (business_type: string, text: string) =>
-    req<CompanyRules>("/api/setup/interview", { method: "POST", body: JSON.stringify({ business_type, text }) }),
+  runSetupInterview: (params: { business_type: string; text: string; company_name?: string; industry_id?: string; operator_name?: string }) =>
+    req<CompanyRules>("/api/setup/interview", { method: "POST", body: JSON.stringify(params) }),
   getActivePolicy: () => req<CompanyRules>("/api/setup/policies/active"),
+  listCases: () => req<ComplaintCase[]>("/api/cases"),
+  listAudit: () => req<AuditEvent[]>("/api/audit"),
   createCase: () => req<ComplaintCase>("/api/cases", { method: "POST", body: JSON.stringify({ business_type: "EC" }) }),
   startSession: (caseId: string) =>
     req<Session>(`/api/cases/${caseId}/sessions`, { method: "POST", body: JSON.stringify({ channel: "text" }) }),

@@ -27,7 +27,13 @@ setupRouter.get("/simulations", (_req, res) => {
 // POST /api/setup/interview — 会社ルール生成→org配下に保存
 setupRouter.post("/setup/interview", async (req, res) => {
   const orgId = req.orgId || "org_001";
-  const rules = setupAgent({ business_type: req.body?.business_type, text: req.body?.text });
+  const rules = setupAgent({
+    business_type: req.body?.business_type,
+    text: req.body?.text,
+    company_name: req.body?.company_name,
+    industry_id: req.body?.industry_id,
+    operator_name: req.body?.operator_name,
+  });
   const store = getStore();
   await store.setPolicy(orgId, rules);
   await store.appendAudit(orgId, {

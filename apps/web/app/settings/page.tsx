@@ -20,11 +20,36 @@ const SEED_OPERATORS: Row[] = [
 const SUGGEST_MODES = ["OFF", "Text", "Icon", "Digest", "Admin Only"];
 
 // 拡張オプション（今後）— 設計済み・将来実装。拡張性を示すための表示。
+const DONE = [
+  "リアルタイム判定（危険度・禁忌・次アクション）",
+  "承認ゲート / 禁忌ストップ / Overreach",
+  "報告書生成・クローズゲート",
+  "初期設定ウィザード / 練習シミュレーション",
+  "管理者ダッシュボード・案件履歴・監査ログ閲覧",
+  "改善提案パネル（PDCAの入口）",
+  "テナント分離（Firebase認証＋Firestore）",
+  "音声入力（Web Speech API）",
+];
+
 const EXTENSIONS = [
-  { t: "複数端末リアルタイム同期", d: "現場・上長・本部が同じ案件を同時に見る（Firestoreリスナー）" },
-  { t: "LINE / メール通知", d: "高リスク案件の上長通知・顧客への返信下書き" },
-  { t: "CRM・外部DB連携", d: "MCP Tool Hub 経由で顧客情報・注文履歴を参照" },
-  { t: "音声応答（Gemini Live）", d: "電話・対面のリアルタイム音声対応" },
+  { t: "上司承認画面（Approval Gate）", d: "AIが承認必要と判定した案件を、上司が承認・差し戻し・法務へ回せる画面。" },
+  { t: "残務チケット管理", d: "残務を一覧化し、担当・期限・種別で管理。抜け漏れを防ぐ。" },
+  { t: "PDCA・傾向分析（複数案件）", d: "複数案件の傾向から再発防止を提案。クロス案件の分析。" },
+  { t: "役割・権限管理（RBAC）", d: "現場 / 上長 / 管理者でできる操作を制御。" },
+  { t: "多言語クレーム対応", d: "外国語のクレームを解析し、日本語で助言。インバウンド対応に。" },
+  { t: "部署・ワークスペース切替", d: "1組織の中で営業課・経理部などを切り替え。各部署が独自の会社ルール・案件を持てます。" },
+  { t: "複数端末リアルタイム同期", d: "現場・上長・本部が同じ案件を同時に見る（Firestoreリスナー）。" },
+  { t: "LINE / メール通知", d: "高リスク案件の上長通知・顧客への返信下書き。" },
+  { t: "音声応答（Gemini Live）", d: "電話・対面のリアルタイム音声対応。" },
+];
+
+// 外部連携（MCP Tool Hub 経由・未実装の拡張枠）
+const MCP_TOOLS = [
+  { t: "会計・経理ソフト連携", d: "freee / マネーフォワード / 弥生 / 奉行・大臣シリーズ など。返金・補償の経理処理を連携。" },
+  { t: "グループウェア連携", d: "サイボウズ Office / kintone。上司報告・承認申請をワークフローに連携。" },
+  { t: "社内データ連携", d: "Microsoft 365 / SharePoint / Access。社内手順書・台帳を参照。" },
+  { t: "顧客DB・CRM連携", d: "Salesforce / 各種CRM。顧客情報・取引履歴をその場で参照。" },
+  { t: "チャット通知連携", d: "Slack / Microsoft Teams。高リスク案件を担当者・上長へ即時エスカレーション。" },
 ];
 
 export default function SettingsPage() {
@@ -117,9 +142,18 @@ export default function SettingsPage() {
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>
-        <p className="section-title">拡張オプション（今後）</p>
+        <p className="section-title">実装済みの主な機能</p>
+        <div>
+          {DONE.map((t) => (
+            <span className="tag" key={t} style={{ margin: "3px 6px 3px 0", background: "rgba(52,211,153,0.14)", color: "#86efac" }}>✅ {t}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <p className="section-title">機能ロードマップ（実装可能・順次）</p>
         <p className="hint" style={{ marginTop: 0 }}>
-          設計済みの拡張ポイント。MCP Tool Hub / Firestore / Gemini Live で段階的に有効化できます。
+          設計書に基づく実装可能な機能群。現在のスタック（Next.js / Cloud Run / Firestore / Gemini / MCP）で段階的に追加できます。
         </p>
         {EXTENSIONS.map((x) => (
           <div className="toggle" key={x.t}>
@@ -128,6 +162,22 @@ export default function SettingsPage() {
               <div className="d">{x.d}</div>
             </div>
             <div className="switch" aria-disabled title="今後対応" />
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <p className="section-title">外部連携（MCP・実装可能）</p>
+        <p className="hint" style={{ marginTop: 0 }}>
+          MCP（Model Context Protocol）Tool Hub 経由で、会計・グループウェア・顧客DBと連携できます（未実装）。クレーム対応に必要な情報をその場で参照・記録します。
+        </p>
+        {MCP_TOOLS.map((x) => (
+          <div className="toggle" key={x.t}>
+            <div className="label">
+              <span className="t">{x.t}<span className="badge-soon">MCP</span></span>
+              <div className="d">{x.d}</div>
+            </div>
+            <div className="switch" aria-disabled title="MCPで実装可能" />
           </div>
         ))}
       </div>

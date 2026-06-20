@@ -136,6 +136,9 @@ export interface CompanyRules {
   tone: string;
   forbidden_phrases: ForbiddenPhrase[];
   approval_required: string[];
+  company_name?: string;
+  industry_id?: string;
+  operator_name?: string;
 }
 
 // 業種テンプレート（02 MVP仕様 10章 / 01 設計思想 12章）

@@ -18,6 +18,7 @@ interface Q {
 const QUESTIONS: Q[] = [
   { id: "form", q: "御社の形態・業態はどれですか？", kind: "single", source: "api" },
   { id: "company", q: "御社名を教えてください", kind: "free" },
+  { id: "operator", q: "主な対応担当者のお名前は？", kind: "free" },
   { id: "complaints", q: "よくある苦情はどれですか？（複数選択可）", kind: "multi", source: "template_complaints" },
   { id: "approver", q: "返金・補償の承認は誰が行いますか？", kind: "single", source: "api" },
   { id: "notify", q: "SNS拡散など高リスク時、誰に通知しますか？", kind: "single", source: "api" },
@@ -92,7 +93,13 @@ export default function SetupPage() {
     setError(null);
     const text = `業種:${a.industry}（${a.form ?? ""}）。会社名:${a.company ?? ""}。よくある苦情:${a.complaints ?? ""}。返金・補償の承認は${a.approver ?? ""}。高リスク時は${a.notify ?? ""}。`;
     try {
-      const r = await api.runSetupInterview(industry?.label ?? "EC", text);
+      const r = await api.runSetupInterview({
+        business_type: industry?.label ?? "EC",
+        text,
+        company_name: a.company,
+        industry_id: industry?.id,
+        operator_name: a.operator,
+      });
       setRules(r);
       setPhase("review");
     } catch (e) {

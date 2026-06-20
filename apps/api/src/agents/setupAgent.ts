@@ -3,10 +3,16 @@ import { CORE_FORBIDDEN_PHRASES } from "@complaintops/shared";
 
 /**
  * Setup Agent（モック版 / 01 設計思想 7.4・9.2）
- * 自然文の会社説明から、運用可能な会社ルール(CompanyRules)を生成する。
- * 後で Gemini に差し替え可能（戻り値の型は不変）。
+ * 自然文の会社説明から会社ルール(CompanyRules)を生成する。
+ * 会社名・業種ID・担当者名も受け取り、現場画面のパーソナライズに使う。
  */
-export function setupAgent(input: { business_type?: string; text?: string }): CompanyRules {
+export function setupAgent(input: {
+  business_type?: string;
+  text?: string;
+  company_name?: string;
+  industry_id?: string;
+  operator_name?: string;
+}): CompanyRules {
   const text = input.text ?? "";
   const approval: string[] = [];
 
@@ -24,5 +30,8 @@ export function setupAgent(input: { business_type?: string; text?: string }): Co
     tone,
     forbidden_phrases: CORE_FORBIDDEN_PHRASES,
     approval_required: Array.from(new Set(approval)),
+    company_name: input.company_name?.trim() || undefined,
+    industry_id: input.industry_id || undefined,
+    operator_name: input.operator_name?.trim() || undefined,
   };
 }

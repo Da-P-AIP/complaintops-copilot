@@ -101,6 +101,9 @@ export interface CompanyRules {
   tone: string;
   forbidden_phrases: ForbiddenPhrase[];
   approval_required: string[];
+  company_name?: string;
+  industry_id?: string;
+  operator_name?: string;
 }
 
 export interface JobTemplate {
@@ -144,4 +147,16 @@ export interface ClosureResult {
   closure_status: "blocked" | "closeable";
   blocking_reasons: string[];
   required_actions: string[];
+}
+
+export interface AuditEvent {
+  id: string;
+  org_id: string;
+  case_id: string | null;
+  actor: string;
+  action: string;
+  detail: Record<string, unknown>;
+  prev_hash: string;
+  event_hash: string;
+  created_at: string;
 }
