@@ -1,11 +1,36 @@
 import { Router } from "express";
-import type { ConversationEvent, Speaker, AnalyzeResult, Evaluation } from "@complaintops/shared";
+import type { ConversationEvent, Speaker, AnalyzeResult, Evaluation, RiskResult } from "@complaintops/shared";
 import { getStore, genId } from "../db/store";
 import { ok, fail } from "../utils/response";
 import { analyzeUtterance } from "../orchestrator/ComplaintOpsOrchestrator";
 import { evaluateAgent } from "../agents/evaluateAgent";
+import { geminiCustomerTurn } from "../agents/geminiClient";
 
 export const sessionsRouter = Router();
+
+function speakerJP(s: string): string {
+  return s === "customer" ? "顧客" : s === "operator" ? "担当者" : "システム";
+}
+function buildHistory(events: ConversationEvent[]): string {
+  return events.map((e) => `${speakerJP(e.speaker)}: ${e.text}`).join("\n");
+}
+function riskOf(a: AnalyzeResult): RiskResult {
+  return {
+    risk_level: a.risk_level,
+    anger_level: a.anger_level,
+    complaint_type: a.complaint_type,
+    detected_risks: a.detected_risks,
+    supervisor_report_required: a.supervisor_report_required,
+    approval_required: a.approval_required,
+  };
+}
+
+const FALLBACK_CUSTOMER_LINES = [
+  "それで、結局どうしてくれるんですか？",
+  "さっきから同じ話ばかりで、誠意が感じられません。",
+  "ちゃんと責任者に対応してほしいんですけど。",
+  "とにかく早く解決してください。",
+];
 
 // POST /api/sessions/:sessionId/events
 sessionsRouter.post("/:sessionId/events", async (req, res) => {
@@ -18,14 +43,8 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
   if (!text.trim()) return fail(res, "VALIDATION_ERROR", "text は必須です");
 
   const speaker: Speaker = (req.body?.speaker as Speaker) || "customer";
-  const ev: ConversationEvent = {
-    id: genId("evt"),
-    session_id: s.id,
-    case_id: s.case_id,
-    speaker,
-    text,
-    created_at: new Date().toISOString(),
-  };
+  const prior = await store.listEvents(orgId, s.case_id);
+  const ev: ConversationEvent = { id: genId("evt"), session_id: s.id, case_id: s.case_id, speaker, text, created_at: new Date().toISOString() };
   await store.addEvent(orgId, ev);
 
   let analysis: AnalyzeResult | null = null;
@@ -34,35 +53,48 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
     const basePolicy = await store.getPolicy(orgId);
     const overrideInd = (req.body?.industry_id ?? "").toString();
     const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
-    analysis = await analyzeUtterance(text, policy);
-    await store.patchCase(orgId, s.case_id, {
-      latest_risk: {
-        risk_level: analysis.risk_level,
-        anger_level: analysis.anger_level,
-        complaint_type: analysis.complaint_type,
-        detected_risks: analysis.detected_risks,
-        supervisor_report_required: analysis.supervisor_report_required,
-        approval_required: analysis.approval_required,
-      },
-      status: "in_progress",
-    });
-    await store.appendAudit(orgId, {
-      case_id: s.case_id,
-      actor: "ai",
-      action: "ai.analyze",
-      detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks },
-    });
+    analysis = await analyzeUtterance(text, policy, buildHistory([...prior, ev]));
+    await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: "in_progress" });
+    await store.appendAudit(orgId, { case_id: s.case_id, actor: "ai", action: "ai.analyze", detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks } });
   } else if (speaker === "operator") {
     const policy = await store.getPolicy(orgId);
     evaluation = evaluateAgent(text, policy);
-    await store.appendAudit(orgId, {
-      case_id: s.case_id,
-      actor: "ai",
-      action: "operator.evaluate",
-      detail: { status: evaluation.status, issues: evaluation.issues.length },
-    });
+    await store.appendAudit(orgId, { case_id: s.case_id, actor: "ai", action: "operator.evaluate", detail: { status: evaluation.status, issues: evaluation.issues.length } });
   }
   await store.appendAudit(orgId, { case_id: s.case_id, actor: speaker, action: "conversation.add", detail: { event_id: ev.id } });
 
   ok(res, { event: ev, analysis, evaluation }, 201);
+});
+
+// POST /api/sessions/:sessionId/customer-turn — Geminiがクレーム客を演じ、担当者の対応に反応する
+sessionsRouter.post("/:sessionId/customer-turn", async (req, res) => {
+  const orgId = req.orgId || "org_001";
+  const store = getStore();
+  const s = await store.getSession(orgId, req.params.sessionId);
+  if (!s) return fail(res, "NOT_FOUND", "セッションが見つかりません", 404);
+
+  const prior = await store.listEvents(orgId, s.case_id);
+  const industryLabel = (req.body?.industry_label ?? "").toString();
+  let line = FALLBACK_CUSTOMER_LINES[prior.length % FALLBACK_CUSTOMER_LINES.length]!;
+  let source: "gemini" | "fallback" = "fallback";
+  if (process.env.AI_MODE === "gemini" && process.env.GEMINI_API_KEY) {
+    try {
+      line = await geminiCustomerTurn(buildHistory(prior), industryLabel);
+      source = "gemini";
+    } catch {
+      // keep fallback line
+    }
+  }
+
+  const ev: ConversationEvent = { id: genId("evt"), session_id: s.id, case_id: s.case_id, speaker: "customer", text: line, created_at: new Date().toISOString() };
+  await store.addEvent(orgId, ev);
+
+  const basePolicy = await store.getPolicy(orgId);
+  const overrideInd = (req.body?.industry_id ?? "").toString();
+  const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
+  const analysis = await analyzeUtterance(line, policy, buildHistory([...prior, ev]));
+  await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: "in_progress" });
+  await store.appendAudit(orgId, { case_id: s.case_id, actor: "customer", action: "customer.turn", detail: { source } });
+
+  ok(res, { event: ev, analysis, source }, 201);
 });

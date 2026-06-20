@@ -56,6 +56,8 @@ export const api = {
     req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "customer", ...(industryId ? { industry_id: industryId } : {}) }) }),
   addOperatorEvent: (sessionId: string, text: string) =>
     req<EventResult>(`/api/sessions/${sessionId}/events`, { method: "POST", body: JSON.stringify({ text, speaker: "operator" }) }),
+  customerTurn: (sessionId: string, industryId: string, industryLabel: string) =>
+    req<EventResult & { source?: string }>(`/api/sessions/${sessionId}/customer-turn`, { method: "POST", body: JSON.stringify({ industry_id: industryId, industry_label: industryLabel }) }),
   saveReport: (caseId: string, markdown: string) =>
     req<{ saved: boolean }>(`/api/cases/${caseId}/report/save`, { method: "POST", body: JSON.stringify({ markdown }) }),
   generateReport: (caseId: string) =>

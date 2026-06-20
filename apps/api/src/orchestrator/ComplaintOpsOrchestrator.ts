@@ -33,11 +33,11 @@ function mergeForbidden(floor: ForbiddenPhrase[], extra: ForbiddenPhrase[]): For
  * ComplaintOps Orchestrator（ハイブリッド）。
  * 組織ごとの会社ルール(policy)を安全フロアとして使い、Gemini有効時は安全側マージ。
  */
-export async function analyzeUtterance(text: string, policy: CompanyRules = DEFAULT_COMPANY_RULES): Promise<AnalyzeResult> {
+export async function analyzeUtterance(text: string, policy: CompanyRules = DEFAULT_COMPANY_RULES, history?: string): Promise<AnalyzeResult> {
   const floor = mockAnalyze(text, policy);
   if (process.env.AI_MODE !== "gemini" || !process.env.GEMINI_API_KEY) return floor;
   try {
-    const g = await geminiAnalyze(text);
+    const g = await geminiAnalyze(text, history);
     const detected = new Set<DetectedRisk>([
       ...floor.detected_risks,
       ...((g.detected_risks as DetectedRisk[] | undefined) ?? []),

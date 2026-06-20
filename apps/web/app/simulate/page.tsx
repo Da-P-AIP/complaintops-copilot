@@ -15,8 +15,7 @@ export default function SimulatePage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const sessionRef = useRef<string | null>(null);
-  const [lineIdx, setLineIdx] = useState(0);
-  const lineIdxRef = useRef(0);
+  const [started, setStarted] = useState(false);
   const [events, setEvents] = useState<ConversationEvent[]>([]);
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
@@ -48,6 +47,7 @@ export default function SimulatePage() {
       const r = await api.addEvent(sid, text, industryId);
       setEvents((p) => [...p, r.event]);
       if (r.analysis) setAnalysis(r.analysis);
+      setStarted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "送信に失敗");
     } finally {
@@ -71,24 +71,30 @@ export default function SimulatePage() {
     }
   };
 
-  const playLine = async (s: Scenario, idx: number) => {
-    if (idx >= s.lines.length) return;
-    lineIdxRef.current = idx + 1;
-    setLineIdx(idx + 1);
-    await sendCustomer(s.lines[idx]);
+  const reactCustomer = async () => {
+    const sid = sessionRef.current;
+    if (!sid) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.customerTurn(sid, industryId, industry.label);
+      setEvents((p) => [...p, r.event]);
+      if (r.analysis) setAnalysis(r.analysis);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "送信に失敗");
+    } finally {
+      setBusy(false);
+    }
   };
+
   const pickScenario = async (s: Scenario) => {
     setScenario(s);
-    lineIdxRef.current = 0;
-    setLineIdx(0);
     setEvents([]);
     setAnalysis(null);
     setEvaluation(null);
-    await playLine(s, 0);
-  };
-  const nextLine = async () => {
-    if (!scenario) return;
-    await playLine(scenario, lineIdxRef.current);
+    sessionRef.current = null;
+    setStarted(false);
+    await sendCustomer(s.lines[0]);
   };
   const sendFree = async () => {
     const t = free.trim();
@@ -97,13 +103,11 @@ export default function SimulatePage() {
     setFree("");
   };
 
-  const done = scenario ? lineIdx >= scenario.lines.length : false;
-
   return (
     <div className="container" style={{ "--accent": industry.color } as React.CSSProperties}>
       <h2 style={{ marginBottom: 4 }}>クレーム会話シミュレーション（練習モード）</h2>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        業種を選んで、シナリオ再生 or 自分でクレームを入力 → AI判定を見て、あなたの返答を入力・選択すると評価されます。
+        AIがクレーム客を演じ、あなたの対応に反応します。業種を選び、シナリオ or 自由入力で開始 → 返答すると客が反応＆評価されます。
       </p>
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
 
@@ -115,8 +119,8 @@ export default function SimulatePage() {
       </div>
 
       <div className="sim-bar">
-        <span className="hint">シナリオ:</span>
-        {filtered.length === 0 && <span className="hint">この業種のプリセットはありません。下の自由入力で練習できます。</span>}
+        <span className="hint">シナリオで開始:</span>
+        {filtered.length === 0 && <span className="hint">この業種のプリセットはありません。下の自由入力で開始できます。</span>}
         {filtered.map((s) => (<button key={s.id} className={`choice${scenario?.id === s.id ? " sel" : ""}`} onClick={() => pickScenario(s)} disabled={busy}>{s.label}</button>))}
       </div>
 
@@ -137,14 +141,13 @@ export default function SimulatePage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card">
-            <p className="section-title">シナリオ進行</p>
-            {!scenario ? (
-              <p className="hint">シナリオを選ぶか、上の自由入力で開始できます。</p>
-            ) : !done ? (
-              <button className="btn" onClick={nextLine} disabled={busy}>{`次のクレーム発話（${lineIdx}/${scenario.lines.length}）▶`}</button>
+            <p className="section-title">クレーム客（AIが演じます）</p>
+            {!started ? (
+              <p className="hint">シナリオを選ぶか、自由入力で会話を始めてください。</p>
             ) : (
-              <p style={{ color: "var(--ok)" }}>シナリオ完了。落ち着いて対応できましたか？</p>
+              <button className="btn" onClick={reactCustomer} disabled={busy}>クレーム客の反応を見る ▶</button>
             )}
+            <p className="hint" style={{ marginTop: 8 }}>あなたの対応次第で、客が落ち着いたり強まったりします。</p>
           </div>
           <ConversationLog events={events} />
         </div>
