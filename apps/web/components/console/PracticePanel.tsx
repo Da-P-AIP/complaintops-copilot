@@ -29,6 +29,13 @@ export function PracticePanel() {
 
   useEffect(() => {
     api.getSimulations().then(setScenarios).catch((e) => setError(e instanceof Error ? e.message : "シナリオ取得に失敗（APIを確認）"));
+    // 登録済みの会社設定の業種に合わせて初期表示する
+    api
+      .getActivePolicy()
+      .then((p) => {
+        if (p.industry_id && Object.values(INDUSTRIES).some((m) => m.id === p.industry_id)) setIndustryId(p.industry_id);
+      })
+      .catch(() => {});
   }, []);
 
   const industry = industryOf(industryId);
