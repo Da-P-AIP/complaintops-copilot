@@ -8,7 +8,7 @@ function url(): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
 }
 
-async function callGemini(prompt: string, timeoutMs = 12000): Promise<string> {
+async function callOnce(prompt: string, timeoutMs: number): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -28,6 +28,27 @@ async function callGemini(prompt: string, timeoutMs = 12000): Promise<string> {
     return raw;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// タイムアウト延長＋1回リトライ（フォールバック落ちを減らす）。
+async function callGemini(prompt: string, timeoutMs = 16000): Promise<string> {
+  try {
+    return await callOnce(prompt, timeoutMs);
+  } catch {
+    return await callOnce(prompt, timeoutMs);
+  }
+}
+
+// Geminiが稀にコードフェンス等を付けても拾えるよう頑健にJSONを抽出する。
+function safeJson<T>(raw: string): T {
+  const s = (raw ?? "").trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    const m = s.match(/[{[][\s\S]*[}\]]/);
+    if (m) return JSON.parse(m[0]) as T;
+    throw new Error("Gemini JSON parse failed");
   }
 }
 
@@ -51,9 +72,10 @@ ${history && history.trim() ? history : "（まだありません）"}
 ${text}
 # 指示
 会話全体の流れを踏まえて判定し、担当者が「次に」言うべき発話案(say_this)を出してください。呼称・用語は上記の業種背景に必ず合わせること。すでに謝罪や事実確認が済んでいれば繰り返さず、次の段階（方針提示・代替案・クロージング等）へ進めること。
+重要: say_this では「返金します／全額返金／無料にします／代金を頂戴しません／必ず補償します」等の金銭・補償の確約を絶対にしないこと。必ず「確認のうえ」「上席の承認を得てから」など留保つきの表現に留めること。
 # 出力（JSONのみ。前後に文章を付けない）
 {"risk_level":"low|medium|high|critical","anger_level":"low|medium|high","complaint_type":"product_damage|delivery|refund|service|billing|other","detected_risks":[],"supervisor_report_required":false,"approval_required":false,"say_this":[],"dont_say_this":[{"phrase":"","category":"refund_commitment|legal_responsibility|customer_action_restriction|dismissive|other","severity":"low|medium|high","reason":""}],"next_actions":[]}`;
-  return JSON.parse(await callGemini(prompt)) as Partial<AnalyzeResult>;
+  return safeJson(await callGemini(prompt)) as Partial<AnalyzeResult>;
 }
 
 /**
@@ -72,7 +94,7 @@ ${history && history.trim() ? history : "（まだありません）"}
 - 解決に近づいたら矛を収め始める。1〜2文の短い発話。顧客のセリフのみ。
 # 出力（JSONのみ）
 {"line":"（クレーム客のセリフ）"}`;
-  const parsed = JSON.parse(await callGemini(prompt, 10000)) as { line?: string };
+  const parsed = safeJson(await callGemini(prompt, 10000)) as { line?: string };
   const line = (parsed.line ?? "").toString().trim();
   if (!line) throw new Error("empty customer line");
   return line;
@@ -83,7 +105,7 @@ ${history && history.trim() ? history : "（まだありません）"}
  */
 export async function geminiChoices(question: string, context: string): Promise<string[]> {
   const prompt = `クレーム対応システムの初期設定です。次の質問に対する適切な選択肢を3〜5個、JSON配列(文字列のみ)で返してください。最後に必ず「その他」を含めること。質問: ${question}\nこれまでの回答(文脈): ${context}`;
-  const arr = JSON.parse(await callGemini(prompt, 10000));
+  const arr = safeJson(await callGemini(prompt, 10000));
   return Array.isArray(arr) ? arr.map((x) => String(x)) : [];
 }
 
@@ -106,7 +128,7 @@ export async function geminiSetupRules(input: { industry_label?: string; company
 - approval_required は、その会社で人間承認すべき操作（返金・補償・正式送信・法的判断など）。
 # 出力（JSONのみ。前後に文章を付けない）
 {"tone":"","approval_required":[],"forbidden_phrases":[{"phrase":"","category":"","severity":"low|medium|high","reason":""}]}`;
-  return JSON.parse(await callGemini(prompt)) as GeminiRulesResult;
+  return safeJson(await callGemini(prompt)) as GeminiRulesResult;
 }
 
 export interface GeminiRuleExtract {
@@ -130,7 +152,7 @@ ${report && report.trim() ? report : "（なし）"}
 - 一般論ではなく、この対応から学べる「現場の型」を。
 # 出力（JSONのみ。前後に文章を付けない）
 {"statement":"","category":"","rationale":""}`;
-  return JSON.parse(await callGemini(prompt, 10000)) as GeminiRuleExtract;
+  return safeJson(await callGemini(prompt, 10000)) as GeminiRuleExtract;
 }
 
 export interface GeminiProfileResult extends GeminiRulesResult {
@@ -156,5 +178,5 @@ ${text ? `補足説明: ${text}` : ""}
 - tone: 推奨トーン。
 # 出力（JSONのみ。前後に文章を付けない）
 {"customer_term":"","setting":"","fact_finding":"","next_confirm":[],"customer_reactions":{"acknowledge":"","factfind":"","propose":"","close":"","resolved":""},"forbidden_phrases":[{"phrase":"","category":"","severity":"low|medium|high","reason":""}],"approval_required":[],"tone":""}`;
-  return JSON.parse(await callGemini(prompt)) as GeminiProfileResult;
+  return safeJson(await callGemini(prompt)) as GeminiProfileResult;
 }

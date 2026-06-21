@@ -35,8 +35,20 @@ function mergeForbidden(floor: ForbiddenPhrase[], extra: ForbiddenPhrase[]): For
  * ComplaintOps Orchestrator（ハイブリッド）。
  * 組織ごとの会社ルール(policy)を安全フロアとして使い、Gemini有効時は安全側マージ。
  */
+// 助言(say_this)に金銭・補償の確約が混じったら、断定させず人間承認へ回す安全ガード。
+const COMMIT_RE = /(返金します|返金いたします|全額返金|必ず.{0,4}返金|無料にします|無料とさせて|代金を?(?:頂戴|いただき|頂き)ません|必ず.{0,4}補償|全額補償)/;
+function commitmentGuard(result: AnalyzeResult): AnalyzeResult {
+  const hit = result.say_this.some((s) => COMMIT_RE.test(s));
+  if (hit) {
+    result.approval_required = true;
+    result.next_actions = ["⚠️ 助言に金銭・補償の確約あり：断定せず上席の承認へ回す", ...result.next_actions];
+  }
+  return result;
+}
+
 // 承認済みの社内ルール（暗黙知）を助言に注入する。業種一致 or 業種無しのみ。
 function withRules(result: AnalyzeResult, policy: CompanyRules): AnalyzeResult {
+  commitmentGuard(result);
   const applied = (policy.learned_rules ?? []).filter((r) => !r.industry_id || r.industry_id === policy.industry_id).slice(0, 3);
   if (applied.length > 0) {
     result.next_actions = [...applied.map((r) => `📘 社内ルール: ${r.statement}`), ...result.next_actions];

@@ -11,8 +11,8 @@ export function evaluateAgent(text: string, policy: CompanyRules): Evaluation {
       issues.push(`禁忌表現「${f.phrase}」が含まれています（${f.reason}）`);
     }
   }
-  if (/全額返金|必ず返金|返金します/.test(text) && !issues.some((i) => i.includes("返金"))) {
-    issues.push("返金を確約する表現の可能性があります。承認前は確約を避けましょう。");
+  if (/全額返金|必ず返金|返金します|返金いたします|無料にします|無料とさせて|代金を?(?:頂戴|いただき|頂き)ません|全額補償|必ず.{0,4}補償/.test(text) && !issues.some((i) => i.includes("返金") || i.includes("補償") || i.includes("無料"))) {
+    issues.push("返金・無料・補償を確約する表現の可能性があります。承認前は確約を避けましょう。");
   }
   if (/当社の責任|弊社の責任|こちらの責任/.test(text) && !issues.some((i) => i.includes("責任"))) {
     issues.push("責任を断定する表現の可能性があります。原因確認前は断定を避けましょう。");
