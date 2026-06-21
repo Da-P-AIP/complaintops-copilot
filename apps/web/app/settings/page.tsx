@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/apiClient";
 import { industryOf } from "@/lib/industry";
-import type { CompanyRules } from "@/lib/types";
+import type { CompanyRules, KnowledgeRule } from "@/lib/types";
 
 interface Row {
   id: string;
@@ -12,6 +12,7 @@ interface Row {
 }
 
 const SUGGEST_MODES = ["OFF", "Text", "Icon", "Digest", "Admin Only"];
+const RULE_CATS = ["事実確認", "エスカレーション", "顧客対応", "補償判断", "再発防止", "その他"];
 
 const DONE = [
   "リアルタイム判定（危険度・禁忌・次アクション）",
@@ -49,13 +50,17 @@ const MCP_TOOLS = [
 
 export default function SettingsPage() {
   const [policy, setPolicy] = useState<CompanyRules | null>(null);
-  const [rulesCount, setRulesCount] = useState(0);
+  const [rules, setRules] = useState<KnowledgeRule[]>([]);
   const [locations, setLocations] = useState<Row[]>([]);
   const [operators, setOperators] = useState<Row[]>([]);
   const [newLoc, setNewLoc] = useState("");
   const [newOp, setNewOp] = useState("");
+  const [newStmt, setNewStmt] = useState("");
+  const [newCat, setNewCat] = useState("顧客対応");
   const [mode, setMode] = useState("Text");
+  const [msg, setMsg] = useState("");
 
+  const loadRules = () => api.listRules("approved").then(setRules).catch(() => {});
   useEffect(() => {
     api
       .getActivePolicy()
@@ -66,10 +71,14 @@ export default function SettingsPage() {
         if (p.operator_name) setOperators([{ id: "op_main", name: p.operator_name, sub: `現場担当 / ${p.company_name || "自社"}` }]);
       })
       .catch(() => {});
-    api.listRules("approved").then((r) => setRulesCount(r.length)).catch(() => {});
+    loadRules();
   }, []);
 
   const industry = industryOf(policy?.industry_id);
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2500); };
+
+  const editRow = (setList: React.Dispatch<React.SetStateAction<Row[]>>, id: string, name: string) =>
+    setList((p) => p.map((r) => (r.id === id ? { ...r, name } : r)));
 
   const addLoc = () => {
     if (!newLoc.trim()) return;
@@ -82,14 +91,40 @@ export default function SettingsPage() {
     setNewOp("");
   };
 
+  const saveCompany = async () => {
+    const main = locations.find((l) => l.id === "loc_main");
+    if (!main) return;
+    try { const p = await api.updatePolicy({ company_name: main.name.trim() }); setPolicy(p); flash("会社名を保存しました ✓"); }
+    catch (e) { flash(e instanceof Error ? e.message : "保存に失敗"); }
+  };
+  const saveOperator = async () => {
+    const main = operators.find((o) => o.id === "op_main");
+    if (!main) return;
+    try { const p = await api.updatePolicy({ operator_name: main.name.trim() }); setPolicy(p); flash("担当者を保存しました ✓"); }
+    catch (e) { flash(e instanceof Error ? e.message : "保存に失敗"); }
+  };
+
+  const addRule = async () => {
+    if (!newStmt.trim()) return;
+    try {
+      await api.createRule({ statement: newStmt.trim(), category: newCat, industry_id: policy?.industry_id });
+      setNewStmt("");
+      await loadRules();
+      flash("社内ルールを追加しました ✓");
+    } catch (e) { flash(e instanceof Error ? e.message : "追加に失敗"); }
+  };
+  const archiveRule = async (id: string) => {
+    try { await api.rejectRule(id); await loadRules(); } catch (e) { flash(e instanceof Error ? e.message : "削除に失敗"); }
+  };
+
   return (
     <div className="container" style={{ maxWidth: 980 }}>
       <h2 style={{ marginBottom: 4 }}>設定</h2>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
         複数拠点・複数担当者での運用を前提にした設定です。組織全体で対応品質を統一します。
       </p>
+      {msg && <p style={{ color: "var(--ok)", fontWeight: 700 }}>{msg}</p>}
 
-      {/* 現在の会社設定：初期設定で生成された実データと連動 */}
       <div className="card" style={{ borderLeft: `4px solid ${industry.color}` }}>
         <p className="section-title">現在の会社設定（初期設定で生成・現場対応に反映中）</p>
         {!policy ? (
@@ -102,8 +137,8 @@ export default function SettingsPage() {
             <div className="kv"><span className="k">トーン</span><span>{policy.tone}</span></div>
             <div className="kv"><span className="k">禁忌表現</span><span>{policy.forbidden_phrases.length} 件</span></div>
             <div className="kv"><span className="k">人間承認</span><span>{policy.approval_required.length} 項目</span></div>
-            <div className="kv"><span className="k">学習済み社内ルール</span><span>{rulesCount} 件（承認済み）</span></div>
-            <p className="hint" style={{ marginTop: 6 }}>変更するには「初期設定」をやり直してください。下の拠点・担当者はこの設定から表示しています。</p>
+            <div className="kv"><span className="k">社内ルール</span><span>{rules.length} 件（承認済み）</span></div>
+            <p className="hint" style={{ marginTop: 6 }}>業種・禁忌の変更は「初期設定」をやり直してください。会社名・担当者・社内ルールはこの画面で編集できます。</p>
           </>
         )}
       </div>
@@ -114,9 +149,8 @@ export default function SettingsPage() {
           {locations.length === 0 && <p className="hint">初期設定で会社名を登録すると表示されます。</p>}
           {locations.map((l) => (
             <div className="list-row" key={l.id}>
-              <span className="grow">
-                <strong>{l.name}</strong> <span className="hint">{l.sub}</span>
-              </span>
+              <input className="text-input" value={l.name} onChange={(e) => editRow(setLocations, l.id, e.target.value)} style={{ flex: 1 }} />
+              <span className="hint" style={{ whiteSpace: "nowrap" }}>{l.sub}</span>
               <button className="del" onClick={() => setLocations((p) => p.filter((x) => x.id !== l.id))}>✕</button>
             </div>
           ))}
@@ -124,7 +158,10 @@ export default function SettingsPage() {
             <input className="text-input" placeholder="拠点名を追加…" value={newLoc} onChange={(e) => setNewLoc(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addLoc()} />
             <button className="btn sm" onClick={addLoc}>追加</button>
           </div>
-          <p className="hint" style={{ marginTop: 6 }}>※ 追加分の永続化・部署切替は今後対応（ロードマップ）。</p>
+          <div className="input-actions" style={{ marginTop: 8 }}>
+            <button className="btn sm ghost" onClick={saveCompany} disabled={!locations.some((l) => l.id === "loc_main")}>会社名を保存</button>
+            <span className="hint">主拠点名＝会社名として保存。追加拠点の永続化は今後対応。</span>
+          </div>
         </div>
 
         <div className="card">
@@ -132,9 +169,8 @@ export default function SettingsPage() {
           {operators.length === 0 && <p className="hint">初期設定で担当者を登録すると表示されます。</p>}
           {operators.map((o) => (
             <div className="list-row" key={o.id}>
-              <span className="grow">
-                <strong>{o.name}</strong> <span className="hint">{o.sub}</span>
-              </span>
+              <input className="text-input" value={o.name} onChange={(e) => editRow(setOperators, o.id, e.target.value)} style={{ flex: 1 }} />
+              <span className="hint" style={{ whiteSpace: "nowrap" }}>{o.sub}</span>
               <button className="del" onClick={() => setOperators((p) => p.filter((x) => x.id !== o.id))}>✕</button>
             </div>
           ))}
@@ -142,7 +178,37 @@ export default function SettingsPage() {
             <input className="text-input" placeholder="担当者名を追加…" value={newOp} onChange={(e) => setNewOp(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addOp()} />
             <button className="btn sm" onClick={addOp}>追加</button>
           </div>
-          <p className="hint" style={{ marginTop: 6 }}>※ 追加分の永続化・権限管理(RBAC)は今後対応（ロードマップ）。</p>
+          <div className="input-actions" style={{ marginTop: 8 }}>
+            <button className="btn sm ghost" onClick={saveOperator} disabled={!operators.some((o) => o.id === "op_main")}>担当者を保存</button>
+            <span className="hint">主担当を保存。複数担当・権限管理(RBAC)は今後対応。</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 18, borderColor: "var(--accent-2)" }}>
+        <p className="section-title">社内ルール（暗黙知DB）— 手動で追加・編集</p>
+        <p className="hint" style={{ marginTop: -4 }}>
+          ここで追加したルールは「承認済み」として登録され、現場の助言に反映されます。クレーム対応からの自動抽出は「管理」画面で承認します。
+        </p>
+        <div className="input-row" style={{ marginTop: 8, flexWrap: "wrap" }}>
+          <select className="text-input" value={newCat} onChange={(e) => setNewCat(e.target.value)} style={{ maxWidth: 160, flex: "0 0 auto" }}>
+            {RULE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input className="text-input" placeholder="例：送迎遅延はまず安否確認→当日中に家族へ一次連絡" value={newStmt} onChange={(e) => setNewStmt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addRule()} />
+          <button className="btn sm" onClick={addRule} disabled={!newStmt.trim()}>追加</button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {rules.length === 0 && <p className="hint">まだ社内ルールがありません。上で追加するか、対応をクローズして学びを蓄積してください。</p>}
+          {rules.map((r) => (
+            <div className="list-row" key={r.id} style={{ alignItems: "flex-start" }}>
+              <span className="grow">
+                <span className="tag" style={{ background: "rgba(52,211,153,0.16)", color: "#86efac" }}>{r.category}</span>
+                <div style={{ fontWeight: 600, marginTop: 2 }}>{r.statement}</div>
+              </span>
+              <span className="hint" style={{ whiteSpace: "nowrap" }}>活用 {r.use_count}回</span>
+              <button className="del" title="削除（アーカイブ）" onClick={() => archiveRule(r.id)}>✕</button>
+            </div>
+          ))}
         </div>
       </div>
 

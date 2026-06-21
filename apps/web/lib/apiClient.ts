@@ -51,6 +51,8 @@ export const api = {
   runSetupInterview: (params: { business_type: string; text: string; company_name?: string; industry_id?: string; operator_name?: string }) =>
     req<CompanyRules>("/api/setup/interview", { method: "POST", body: JSON.stringify(params) }),
   getActivePolicy: () => req<CompanyRules>("/api/setup/policies/active"),
+  updatePolicy: (patch: { company_name?: string; operator_name?: string }) =>
+    req<CompanyRules>("/api/setup/policy/update", { method: "POST", body: JSON.stringify(patch) }),
   listCases: () => req<ComplaintCase[]>("/api/cases"),
   listAudit: () => req<AuditEvent[]>("/api/audit"),
   createCase: () => req<ComplaintCase>("/api/cases", { method: "POST", body: JSON.stringify({ business_type: "EC" }) }),
@@ -73,6 +75,8 @@ export const api = {
   closeCase: (caseId: string) => req<{ status: string; learned: KnowledgeRule | null }>(`/api/cases/${caseId}/close`, { method: "POST", body: JSON.stringify({}) }),
   extractRule: (caseId: string) => req<KnowledgeRule>(`/api/cases/${caseId}/extract-rule`, { method: "POST", body: JSON.stringify({}) }),
   listRules: (status?: KnowledgeRule["status"]) => req<KnowledgeRule[]>(`/api/rules${status ? `?status=${status}` : ""}`),
+  createRule: (input: { statement: string; category: string; industry_id?: string }) =>
+    req<KnowledgeRule>("/api/rules", { method: "POST", body: JSON.stringify(input) }),
   approveRule: (id: string) => req<KnowledgeRule>(`/api/rules/${id}/approve`, { method: "POST", body: JSON.stringify({}) }),
   rejectRule: (id: string) => req<KnowledgeRule>(`/api/rules/${id}/reject`, { method: "POST", body: JSON.stringify({}) }),
 };

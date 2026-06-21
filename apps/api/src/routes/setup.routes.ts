@@ -49,3 +49,16 @@ setupRouter.post("/setup/interview", async (req, res) => {
 setupRouter.get("/setup/policies/active", async (req, res) => {
   ok(res, await getStore().getPolicy(req.orgId || "org_001"));
 });
+
+// POST /api/setup/policy/update — 会社名・担当者名など一部フィールドを更新（設定画面の編集）
+setupRouter.post("/setup/policy/update", async (req, res) => {
+  const orgId = req.orgId || "org_001";
+  const store = getStore();
+  const cur = await store.getPolicy(orgId);
+  const next = { ...cur };
+  if (typeof req.body?.company_name === "string") next.company_name = req.body.company_name.trim() || undefined;
+  if (typeof req.body?.operator_name === "string") next.operator_name = req.body.operator_name.trim() || undefined;
+  await store.setPolicy(orgId, next);
+  await store.appendAudit(orgId, { case_id: null, actor: "admin", action: "setup.policy_update", detail: { company_name: next.company_name, operator_name: next.operator_name } });
+  ok(res, next);
+});
