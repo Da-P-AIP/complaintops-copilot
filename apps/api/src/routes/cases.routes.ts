@@ -3,10 +3,35 @@ import { getStore } from "../db/store";
 import { ok, fail } from "../utils/response";
 import { reportAgent } from "../agents/reportAgent";
 import { closureGate } from "../agents/closureGate";
+import { buildRuleCandidate } from "../agents/knowledgeAgent";
+import { resolveProfile } from "../domain/industryProfiles";
+import type { ComplaintCase } from "@complaintops/shared";
 
 export const casesRouter = Router();
 
 const RESOLUTION_KEYS = ["supervisor_reported", "approved", "evidence_checked", "customer_replied"] as const;
+
+// 案件の会話・報告書から社内ルール候補を抽出して保存（暗黙知サイクルの「連結化」）
+async function extractAndSaveRule(orgId: string, c: ComplaintCase) {
+  const store = getStore();
+  const events = await store.listEvents(orgId, c.id);
+  const history = events
+    .map((e) => `${e.speaker === "customer" ? "顧客" : e.speaker === "operator" ? "担当者" : "システム"}: ${e.text}`)
+    .join("\n");
+  const policy = await store.getPolicy(orgId);
+  const profile = resolveProfile(policy.industry_id, policy);
+  const rule = await buildRuleCandidate({
+    orgId,
+    history,
+    report: c.report?.markdown ?? "",
+    profile,
+    caseNo: c.case_no,
+    industryId: policy.industry_id,
+  });
+  await store.addRule(orgId, rule);
+  await store.appendAudit(orgId, { case_id: c.id, actor: "ai", action: "knowledge.extract", detail: { rule_id: rule.id, category: rule.category } });
+  return rule;
+}
 
 // POST /api/cases
 casesRouter.post("/", async (req, res) => {
@@ -103,7 +128,22 @@ casesRouter.post("/:caseId/close", async (req, res) => {
   }
   await store.patchCase(orgId, c.id, { status: "closed" });
   await store.appendAudit(orgId, { case_id: c.id, actor: "operator", action: "case.close", detail: {} });
-  ok(res, { status: "closed" });
+  let learned = null;
+  try {
+    learned = await extractAndSaveRule(orgId, c);
+  } catch {
+    learned = null;
+  }
+  ok(res, { status: "closed", learned });
+});
+
+// POST /api/cases/:caseId/extract-rule — この対応から社内ルール候補を抽出
+casesRouter.post("/:caseId/extract-rule", async (req, res) => {
+  const orgId = req.orgId || "org_001";
+  const c = await getStore().getCase(orgId, req.params.caseId);
+  if (!c) return fail(res, "NOT_FOUND", "案件が見つかりません", 404);
+  const rule = await extractAndSaveRule(orgId, c);
+  ok(res, rule, 201);
 });
 
 // POST /api/cases/:caseId/sessions

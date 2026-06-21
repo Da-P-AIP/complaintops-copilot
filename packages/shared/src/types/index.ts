@@ -151,6 +151,21 @@ export interface AuditEvent {
   created_at: string;
 }
 
+// 暗黙知サイクル：蓄積される社内ルール（学び）。候補→承認→活用。
+export interface KnowledgeRule {
+  id: string;
+  org_id: string;
+  category: string; // 例: 事実確認 / エスカレーション / 顧客対応 / 補償判断 / その他
+  industry_id?: string;
+  statement: string; // 言語化されたルール本文
+  rationale: string; // 抽出根拠（なぜ）
+  source_case_no?: number; // 出典クレームNo.
+  status: "candidate" | "approved" | "archived";
+  use_count: number; // 活用された回数（育っている指標）
+  created_at: string;
+  approved_by?: string;
+}
+
 // 業種プロファイル（呼称・特性・対応の正本テーブル単位）
 export interface IndustryProfile {
   id: string;
@@ -180,6 +195,7 @@ export interface CompanyRules {
   industry_id?: string;
   operator_name?: string;
   industry_profile?: IndustryProfile; // 未知業種でGemini生成した場合に保存し以後参照
+  learned_rules?: KnowledgeRule[]; // 承認済み社内ルール（助言生成へ注入）
 }
 
 // 業種テンプレート（02 MVP仕様 10章 / 01 設計思想 12章）

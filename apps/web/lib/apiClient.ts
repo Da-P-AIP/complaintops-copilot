@@ -13,6 +13,7 @@ import type {
   AuditEvent,
   Evaluation,
   FlowState,
+  KnowledgeRule,
 } from "@/lib/types";
 import { getIdToken } from "@/lib/firebase";
 
@@ -69,5 +70,9 @@ export const api = {
   updateResolution: (caseId: string, key: string, value: boolean) =>
     req<Resolutions>(`/api/cases/${caseId}/resolutions`, { method: "POST", body: JSON.stringify({ key, value }) }),
   getClosure: (caseId: string) => req<ClosureResult>(`/api/cases/${caseId}/closure`),
-  closeCase: (caseId: string) => req<{ status: string }>(`/api/cases/${caseId}/close`, { method: "POST", body: JSON.stringify({}) }),
+  closeCase: (caseId: string) => req<{ status: string; learned: KnowledgeRule | null }>(`/api/cases/${caseId}/close`, { method: "POST", body: JSON.stringify({}) }),
+  extractRule: (caseId: string) => req<KnowledgeRule>(`/api/cases/${caseId}/extract-rule`, { method: "POST", body: JSON.stringify({}) }),
+  listRules: (status?: KnowledgeRule["status"]) => req<KnowledgeRule[]>(`/api/rules${status ? `?status=${status}` : ""}`),
+  approveRule: (id: string) => req<KnowledgeRule>(`/api/rules/${id}/approve`, { method: "POST", body: JSON.stringify({}) }),
+  rejectRule: (id: string) => req<KnowledgeRule>(`/api/rules/${id}/reject`, { method: "POST", body: JSON.stringify({}) }),
 };

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/apiClient";
-import type { ComplaintCase, AuditEvent } from "@/lib/types";
+import type { ComplaintCase, AuditEvent, KnowledgeRule } from "@/lib/types";
 import { RiskBadge } from "../../components/common/RiskBadge";
 
 const STATUS_JP: Record<string, string> = {
@@ -26,12 +26,23 @@ function Stat({ n, label, color }: { n: number; label: string; color?: string })
 export default function AdminPage() {
   const [cases, setCases] = useState<ComplaintCase[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [rules, setRules] = useState<KnowledgeRule[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.listCases().then(setCases).catch((e) => setError(e instanceof Error ? e.message : "取得に失敗"));
     api.listAudit().then(setAudit).catch(() => {});
+    api.listRules().then(setRules).catch(() => {});
   }, []);
+
+  const approveRule = async (id: string) => {
+    try { await api.approveRule(id); setRules(await api.listRules()); } catch (e) { setError(e instanceof Error ? e.message : "承認に失敗"); }
+  };
+  const rejectRule = async (id: string) => {
+    try { await api.rejectRule(id); setRules(await api.listRules()); } catch (e) { setError(e instanceof Error ? e.message : "却下に失敗"); }
+  };
+  const candidates = rules.filter((r) => r.status === "candidate");
+  const approvedRules = rules.filter((r) => r.status === "approved");
 
   const open = cases.filter((c) => c.status !== "closed").length;
   const high = cases.filter((c) => c.latest_risk && (c.latest_risk.risk_level === "high" || c.latest_risk.risk_level === "critical")).length;
@@ -52,6 +63,40 @@ export default function AdminPage() {
         <Stat n={high} label="高リスク" color="var(--danger)" />
         <Stat n={approval} label="承認待ち" color="var(--warn)" />
         <Stat n={closed} label="クローズ" color="var(--ok)" />
+        <Stat n={approvedRules.length} label="社内ルール" color="var(--accent-2)" />
+      </div>
+
+      <div className="card" style={{ marginTop: 18, borderColor: "var(--accent-2)" }}>
+        <p className="section-title">暗黙知DB（社内ルール）— 対応から学び、承認して育てる</p>
+        <p className="hint" style={{ marginTop: -4, marginBottom: 10 }}>
+          クローズ時にAIが「学び」を抽出します。承認すると次回以降の現場助言に自動で反映されます（人間承認ゲート）。
+        </p>
+
+        <div style={{ fontWeight: 700, fontSize: 13, margin: "6px 0" }}>承認待ちの候補（{candidates.length}）</div>
+        {candidates.length === 0 && <p className="hint">候補はありません。案件をクローズすると学びが抽出されます。</p>}
+        {candidates.map((r) => (
+          <div className="list-row" key={r.id} style={{ alignItems: "flex-start" }}>
+            <span className="grow">
+              <span className="tag">{r.category}</span>{r.source_case_no ? <span className="hint"> No.{r.source_case_no}</span> : null}
+              <div style={{ fontWeight: 600, marginTop: 2 }}>{r.statement}</div>
+              {r.rationale && <div className="hint">理由：{r.rationale}</div>}
+            </span>
+            <button className="btn sm" onClick={() => approveRule(r.id)}>承認</button>
+            <button className="del" title="却下" onClick={() => rejectRule(r.id)}>✕</button>
+          </div>
+        ))}
+
+        <div style={{ fontWeight: 700, fontSize: 13, margin: "14px 0 6px" }}>承認済みルール（{approvedRules.length}）</div>
+        {approvedRules.length === 0 && <p className="hint">まだありません。候補を承認すると、ここに蓄積され助言に活用されます。</p>}
+        {approvedRules.map((r) => (
+          <div className="list-row" key={r.id} style={{ alignItems: "flex-start" }}>
+            <span className="grow">
+              <span className="tag" style={{ background: "rgba(52,211,153,0.16)", color: "#86efac" }}>{r.category}</span>
+              <div style={{ fontWeight: 600, marginTop: 2 }}>{r.statement}</div>
+            </span>
+            <span className="hint" style={{ whiteSpace: "nowrap" }}>活用 {r.use_count}回</span>
+          </div>
+        ))}
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>

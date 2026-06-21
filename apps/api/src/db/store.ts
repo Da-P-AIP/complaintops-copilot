@@ -5,6 +5,7 @@ import type {
   ConversationEvent,
   AuditEvent,
   CompanyRules,
+  KnowledgeRule,
 } from "@complaintops/shared";
 import { DEFAULT_COMPANY_RULES } from "@complaintops/shared";
 import { getAdmin } from "../auth/firebaseAdmin";
@@ -38,6 +39,10 @@ export interface Store {
   setPolicy(orgId: string, rules: CompanyRules): Promise<void>;
   appendAudit(orgId: string, input: AuditInput): Promise<AuditEvent>;
   listAudit(orgId: string): Promise<AuditEvent[]>;
+  listRules(orgId: string, status?: KnowledgeRule["status"]): Promise<KnowledgeRule[]>;
+  addRule(orgId: string, rule: KnowledgeRule): Promise<void>;
+  setRuleStatus(orgId: string, id: string, status: KnowledgeRule["status"], approver?: string): Promise<KnowledgeRule | null>;
+  bumpRuleUse(orgId: string, ids: string[]): Promise<void>;
 }
 
 function newCase(orgId: string, input: Partial<ComplaintCase>): ComplaintCase {
@@ -72,6 +77,7 @@ interface OrgData {
   audit: AuditEvent[];
   policy: CompanyRules;
   caseSeq: number;
+  rules: KnowledgeRule[];
 }
 
 class MemoryStore implements Store {
@@ -79,7 +85,7 @@ class MemoryStore implements Store {
   private org(orgId: string): OrgData {
     let o = this.orgs.get(orgId);
     if (!o) {
-      o = { cases: new Map(), sessions: new Map(), events: [], audit: [], policy: DEFAULT_COMPANY_RULES, caseSeq: 0 };
+      o = { cases: new Map(), sessions: new Map(), events: [], audit: [], policy: DEFAULT_COMPANY_RULES, caseSeq: 0, rules: [] };
       this.orgs.set(orgId, o);
     }
     return o;
@@ -133,6 +139,23 @@ class MemoryStore implements Store {
   }
   async listAudit(orgId: string) {
     return this.org(orgId).audit;
+  }
+  async listRules(orgId: string, status?: KnowledgeRule["status"]) {
+    const all = this.org(orgId).rules;
+    return status ? all.filter((r) => r.status === status) : all;
+  }
+  async addRule(orgId: string, rule: KnowledgeRule) {
+    this.org(orgId).rules.push(rule);
+  }
+  async setRuleStatus(orgId: string, id: string, status: KnowledgeRule["status"], approver?: string) {
+    const r = this.org(orgId).rules.find((x) => x.id === id);
+    if (!r) return null;
+    r.status = status;
+    if (approver) r.approved_by = approver;
+    return r;
+  }
+  async bumpRuleUse(orgId: string, ids: string[]) {
+    for (const r of this.org(orgId).rules) if (ids.includes(r.id)) r.use_count += 1;
   }
 }
 
@@ -209,6 +232,32 @@ class FirestoreStore implements Store {
   async listAudit(orgId: string) {
     const q = await this.org(orgId).collection("audit").orderBy("created_at").get();
     return q.docs.map((d) => d.data() as AuditEvent);
+  }
+  async listRules(orgId: string, status?: KnowledgeRule["status"]) {
+    const col = this.org(orgId).collection("rules");
+    const q = status ? await col.where("status", "==", status).get() : await col.get();
+    return q.docs.map((d) => d.data() as KnowledgeRule);
+  }
+  async addRule(orgId: string, rule: KnowledgeRule) {
+    await this.org(orgId).collection("rules").doc(rule.id).set(rule);
+  }
+  async setRuleStatus(orgId: string, id: string, status: KnowledgeRule["status"], approver?: string) {
+    const ref = this.org(orgId).collection("rules").doc(id);
+    const d = await ref.get();
+    if (!d.exists) return null;
+    const patch: Partial<KnowledgeRule> = { status };
+    if (approver) patch.approved_by = approver;
+    await ref.set(patch, { merge: true });
+    return { ...(d.data() as KnowledgeRule), ...patch };
+  }
+  async bumpRuleUse(orgId: string, ids: string[]) {
+    await Promise.all(
+      ids.map(async (id) => {
+        const ref = this.org(orgId).collection("rules").doc(id);
+        const d = await ref.get();
+        if (d.exists) await ref.set({ use_count: ((d.data() as KnowledgeRule).use_count ?? 0) + 1 }, { merge: true });
+      }),
+    );
   }
 }
 

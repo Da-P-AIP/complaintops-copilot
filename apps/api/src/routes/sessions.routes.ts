@@ -50,8 +50,12 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
   if (speaker === "customer") {
     const basePolicy = await store.getPolicy(orgId);
     const overrideInd = (req.body?.industry_id ?? "").toString();
-    const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
+    const baseP = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
+    const approved = await store.listRules(orgId, "approved");
+    const applicable = approved.filter((r) => !r.industry_id || r.industry_id === baseP.industry_id).slice(0, 3);
+    const policy = applicable.length > 0 ? { ...baseP, learned_rules: applicable } : baseP;
     analysis = await analyzeUtterance(text, policy, buildHistory(all), flow.next_stage);
+    if (applicable.length > 0) await store.bumpRuleUse(orgId, applicable.map((r) => r.id));
     await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: "in_progress" });
     await store.appendAudit(orgId, { case_id: s.case_id, actor: "ai", action: "ai.analyze", detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks } });
   } else if (speaker === "operator") {
@@ -103,7 +107,10 @@ sessionsRouter.post("/:sessionId/customer-turn", async (req, res) => {
 
   const all = [...prior, ev];
   const flow = evaluateFlow(all);
-  const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
+  const baseP = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
+  const approved = await store.listRules(orgId, "approved");
+  const applicable = approved.filter((r) => !r.industry_id || r.industry_id === baseP.industry_id).slice(0, 3);
+  const policy = applicable.length > 0 ? { ...baseP, learned_rules: applicable } : baseP;
   const analysis = await analyzeUtterance(line, policy, buildHistory(all), flow.next_stage);
   await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: resolved ? "resolved_pending_close" : "in_progress" });
   await store.appendAudit(orgId, { case_id: s.case_id, actor: "customer", action: "customer.turn", detail: { source, resolved } });

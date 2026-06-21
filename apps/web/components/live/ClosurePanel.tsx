@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/apiClient";
-import type { ClosureResult, Resolutions } from "@/lib/types";
+import type { ClosureResult, Resolutions, KnowledgeRule } from "@/lib/types";
 
 const RES_ITEMS: { key: keyof Resolutions; label: string }[] = [
   { key: "supervisor_reported", label: "上司報告を完了した" },
@@ -18,6 +18,7 @@ export function ClosurePanel({ caseId, initialReport }: { caseId: string; initia
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [learned, setLearned] = useState<KnowledgeRule | null>(null);
 
   const refresh = () => api.getClosure(caseId).then(setClosure).catch(() => {});
   useEffect(() => {
@@ -64,10 +65,22 @@ export function ClosurePanel({ caseId, initialReport }: { caseId: string; initia
   const doClose = async () => {
     setBusy(true);
     try {
-      await api.closeCase(caseId);
+      const r = await api.closeCase(caseId);
       setClosed(true);
+      if (r.learned) setLearned(r.learned);
     } catch (e) {
       alert(e instanceof Error ? e.message : "クローズに失敗");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const extractRule = async () => {
+    setBusy(true);
+    try {
+      setLearned(await api.extractRule(caseId));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "抽出に失敗");
     } finally {
       setBusy(false);
     }
@@ -120,6 +133,17 @@ export function ClosurePanel({ caseId, initialReport }: { caseId: string; initia
             ))}
           </>
         )}
+
+        <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+          <button className="btn sm ghost" onClick={extractRule} disabled={busy}>🧠 この対応から学びを抽出</button>
+          {learned && (
+            <div className="say" style={{ marginTop: 10 }}>
+              <div style={{ fontWeight: 700 }}>📘 社内ルール候補を抽出しました（{learned.category}）</div>
+              <div style={{ marginTop: 2 }}>{learned.statement}</div>
+              <div className="hint" style={{ marginTop: 4 }}>管理画面で承認すると、次回以降の現場助言に自動反映されます。</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

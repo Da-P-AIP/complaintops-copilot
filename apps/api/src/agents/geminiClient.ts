@@ -109,6 +109,30 @@ export async function geminiSetupRules(input: { industry_label?: string; company
   return JSON.parse(await callGemini(prompt)) as GeminiRulesResult;
 }
 
+export interface GeminiRuleExtract {
+  statement?: string;
+  category?: string;
+  rationale?: string;
+}
+
+/** 対応の会話・報告書から「次に活かせる社内ルール（学び）」を1件抽出する。 */
+export async function geminiExtractRule(history: string, report: string, profile?: IndustryProfile): Promise<GeminiRuleExtract> {
+  const prompt = `あなたはクレーム対応のナレッジ抽出AIです。今回の対応から、次回以降に活かせる「社内ルール（学び）」を1件だけ抽出してください。
+${profileHint(profile)}
+# 今回の会話
+${history && history.trim() ? history : "（記録なし）"}
+# 報告書
+${report && report.trim() ? report : "（なし）"}
+# 指示
+- この業種・現場で再利用できる、具体的で実行可能な判断ルールを1文で（statement）。
+- category は 事実確認 / エスカレーション / 顧客対応 / 補償判断 / 再発防止 / その他 から1つ。
+- rationale は、なぜそれが有効かを一言で。
+- 一般論ではなく、この対応から学べる「現場の型」を。
+# 出力（JSONのみ。前後に文章を付けない）
+{"statement":"","category":"","rationale":""}`;
+  return JSON.parse(await callGemini(prompt, 10000)) as GeminiRuleExtract;
+}
+
 export interface GeminiProfileResult extends GeminiRulesResult {
   customer_term?: string;
   setting?: string;

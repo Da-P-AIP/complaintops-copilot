@@ -3,6 +3,7 @@ import cors from "cors";
 import { casesRouter } from "./routes/cases.routes";
 import { sessionsRouter } from "./routes/sessions.routes";
 import { setupRouter } from "./routes/setup.routes";
+import { rulesRouter } from "./routes/rules.routes";
 import { authMiddleware } from "./auth/middleware";
 import { getStore } from "./db/store";
 import { ok } from "./utils/response";
@@ -36,6 +37,7 @@ app.get("/api/audit", async (req, res) => ok(res, await getStore().listAudit(req
 app.use("/api", setupRouter);
 app.use("/api/cases", casesRouter);
 app.use("/api/sessions", sessionsRouter);
+app.use("/api/rules", rulesRouter);
 
 const port = Number(process.env.PORT || 8080);
 app.listen(port, () => {

@@ -99,6 +99,20 @@ export interface ConversationEvent {
   created_at: string;
 }
 
+export interface KnowledgeRule {
+  id: string;
+  org_id: string;
+  category: string;
+  industry_id?: string;
+  statement: string;
+  rationale: string;
+  source_case_no?: number;
+  status: "candidate" | "approved" | "archived";
+  use_count: number;
+  created_at: string;
+  approved_by?: string;
+}
+
 export interface IndustryProfile {
   id: string;
   label: string;
@@ -121,6 +135,7 @@ export interface CompanyRules {
   industry_id?: string;
   operator_name?: string;
   industry_profile?: IndustryProfile;
+  learned_rules?: KnowledgeRule[];
 }
 
 export interface JobTemplate {
