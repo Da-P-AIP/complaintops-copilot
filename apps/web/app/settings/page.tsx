@@ -40,6 +40,18 @@ const EXTENSIONS = [
   { t: "音声応答（Gemini Live）", d: "電話・対面のリアルタイム音声対応。" },
 ];
 
+// 社内暗黙知OS の拡張ロードマップ（未実装・設計済み）
+const TACIT_ROADMAP = [
+  { t: "作業履歴からの暗黙知 自動抽出", d: "操作ログ・チャット・日報などからAIが判断パターンを自動発見。手入力に頼らず、現場の型が貯まる。" },
+  { t: "暗黙知マップ（ダッシュボード）", d: "カテゴリ別に蓄積量・活用回数・鮮度をヒートマップ化。組織知がどこにあるかを一望。" },
+  { t: "横断分析でルール自動発見", d: "複数案件をクラスタリングし「共通の型」を提案。個別対応の背後の法則を可視化。" },
+  { t: "鮮度・陳腐化の検知", d: "使われなくなったルールを自動でレビュー提案（イベント駆動で再評価。タイマー駆動はしない）。" },
+  { t: "競合・重複ルールの統合", d: "矛盾するルールをAIが指摘し、まとめて整理。ナレッジの肥大化を防ぐ。" },
+  { t: "ベテラン⇄新人 スキル移転メトリクス", d: "属人化スコア・継承率を可視化。誰の暗黙知が組織に移ったかを測る。" },
+  { t: "根拠トレーサビリティ", d: "各ルールが「どの案件から生まれたか」を辿れる。説明責任と再評価の土台。" },
+  { t: "部署横断の全社ナレッジ統合", d: "部署ごとの暗黙知を社内暗黙知OSへ集約。クレーム対応を入口に全業務へ。" },
+];
+
 const MCP_TOOLS = [
   { t: "会計・経理ソフト連携", d: "freee / マネーフォワード / 弥生 / 奉行・大臣シリーズ など。返金・補償の経理処理を連携。" },
   { t: "グループウェア連携", d: "サイボウズ Office / kintone。上司報告・承認申請をワークフローに連携。" },
@@ -121,7 +133,7 @@ export default function SettingsPage() {
     <div className="container" style={{ maxWidth: 980 }}>
       <h2 style={{ marginBottom: 4 }}>設定</h2>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        複数拠点・複数担当者での運用を前提にした設定です。組織全体で対応品質を統一します。
+        複数拠点・複数担当者での運用を前提にした設定です。組織全体で対応品質を統一し、現場の暗黙知を可視化・資産化します（社内暗黙知OS）。
       </p>
       {msg && <p style={{ color: "var(--ok)", fontWeight: 700 }}>{msg}</p>}
 
@@ -258,6 +270,22 @@ export default function SettingsPage() {
           設計書に基づく実装可能な機能群。現在のスタック（Next.js / Cloud Run / Firestore / Gemini / MCP）で段階的に追加できます。
         </p>
         {EXTENSIONS.map((x) => (
+          <div className="toggle" key={x.t}>
+            <div className="label">
+              <span className="t">{x.t}<span className="badge-soon">近日</span></span>
+              <div className="d">{x.d}</div>
+            </div>
+            <div className="switch" aria-disabled title="今後対応" />
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 18, borderColor: "var(--accent-2)" }}>
+        <p className="section-title">🧠 社内暗黙知OS ロードマップ（拡張・設計済み）</p>
+        <p className="hint" style={{ marginTop: 0 }}>
+          クレーム対応を入口に、業務の暗黙知を可視化・資産化していく拡張群。承認ゲート・監査・org分離の上で安全に育てます。
+        </p>
+        {TACIT_ROADMAP.map((x) => (
           <div className="toggle" key={x.t}>
             <div className="label">
               <span className="t">{x.t}<span className="badge-soon">近日</span></span>

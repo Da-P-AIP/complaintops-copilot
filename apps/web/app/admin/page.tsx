@@ -54,7 +54,7 @@ export default function AdminPage() {
   return (
     <div className="container">
       <h2 style={{ marginBottom: 4 }}>管理者ダッシュボード</h2>
-      <p style={{ color: "var(--muted)", marginTop: 0 }}>この組織の案件状況と監査ログを俯瞰します。</p>
+      <p style={{ color: "var(--muted)", marginTop: 0 }}>クレーム対応を補佐しつつ、業務の暗黙知を可視化する社内暗黙知OS。案件・監査ログと、蓄積された暗黙知（社内ルール）を俯瞰します。</p>
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 12, marginTop: 8 }}>
