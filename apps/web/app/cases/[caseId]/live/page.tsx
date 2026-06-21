@@ -36,6 +36,17 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
 
   const industry = industryOf(policy?.industry_id);
 
+  const last = events[events.length - 1];
+  const navStep = events.length === 0 ? 1 : last?.speaker === "customer" ? 4 : 1;
+  const navDone = flow?.resolved ?? false;
+  const navMsg = busy
+    ? "AIが対応を考えています…"
+    : events.length === 0
+    ? "まず顧客の発話を入力し、「送信して判定」を押してください"
+    : last?.speaker === "customer"
+    ? "助言（③）を確認し、担当者の対応を記録（④）しましょう。推奨返答のタップでもOKです"
+    : "次の顧客発話を入力するか、対応フローを進めましょう";
+
   const onSend = async (text: string) => {
     if (!sessionId) return;
     setBusy(true);
@@ -87,18 +98,23 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
       <p style={{ color: "var(--muted)", marginTop: 8 }}>AIが顧客を説得するのではなく、対応中のあなたを守ります。</p>
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
 
+      <div className={`nav-step${navDone ? " done" : ""}`}>
+        <span className="num">{navDone ? "✓" : navStep}</span>
+        <span>{navDone ? "対応フロー完了。報告書を確認してクローズできます。" : `次にやること: ${navMsg}`}</span>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: 16, marginTop: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <ConversationInput onSend={onSend} disabled={!sessionId || busy} samples={industry.samples} />
-          <OperatorInput onSend={onOperator} disabled={!sessionId || busy} />
+          <ConversationInput onSend={onSend} disabled={!sessionId || busy} samples={industry.samples} step={1} />
+          <OperatorInput onSend={onOperator} disabled={!sessionId || busy} step={4} suggestions={analysis?.say_this ?? []} />
           <ConversationLog events={events} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Thinking show={busy} label="AIが判定しています" />
-          <RiskPanel analysis={analysis} />
+          <RiskPanel analysis={analysis} step={2} />
           <FlowPanel flow={flow} />
         </div>
-        <AdvicePanel analysis={analysis} />
+        <AdvicePanel analysis={analysis} step={3} />
       </div>
 
       <EvaluationPanel evaluation={evaluation} />

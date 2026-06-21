@@ -12,10 +12,10 @@ const RISK_LABEL: Record<string, string> = {
   high_anger: "怒りレベル高",
 };
 
-export function RiskPanel({ analysis }: { analysis: AnalyzeResult | null }) {
+export function RiskPanel({ analysis, step }: { analysis: AnalyzeResult | null; step?: number }) {
   return (
     <div className="card">
-      <p className="section-title">AI判定</p>
+      <p className="section-title">{step != null && <span className="step-badge">{step}</span>}AI判定</p>
       {!analysis ? (
         <p style={{ color: "var(--muted)" }}>判定待ち</p>
       ) : (

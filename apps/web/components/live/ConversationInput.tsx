@@ -13,10 +13,12 @@ export function ConversationInput({
   onSend,
   disabled,
   samples,
+  step,
 }: {
   onSend: (text: string) => void;
   disabled?: boolean;
   samples?: string[];
+  step?: number;
 }) {
   const [text, setText] = useState("");
   const { supported, listening, start, stop } = useSpeechRecognition("ja-JP");
@@ -39,7 +41,7 @@ export function ConversationInput({
 
   return (
     <div className="card">
-      <p className="section-title">顧客発話の入力</p>
+      <p className="section-title">{step != null && <span className="step-badge">{step}</span>}顧客発話の入力</p>
       <div className="input-row">
         <input
           className="text-input"

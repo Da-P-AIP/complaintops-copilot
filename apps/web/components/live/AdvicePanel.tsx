@@ -1,10 +1,10 @@
 import type { AnalyzeResult } from "@/lib/types";
 import { ForbiddenPhraseList } from "./ForbiddenPhraseList";
 
-export function AdvicePanel({ analysis }: { analysis: AnalyzeResult | null }) {
+export function AdvicePanel({ analysis, step }: { analysis: AnalyzeResult | null; step?: number }) {
   return (
     <div className="card">
-      <p className="section-title">助言</p>
+      <p className="section-title">{step != null && <span className="step-badge">{step}</span>}助言</p>
       {!analysis ? (
         <p style={{ color: "var(--muted)" }}>判定待ち</p>
       ) : (

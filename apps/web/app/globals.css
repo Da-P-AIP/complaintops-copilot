@@ -75,6 +75,20 @@ a { color: var(--accent); text-decoration: none; }
   padding: 7px 16px;
 }
 
+/* ---- Step navigation ---- */
+.step-badge {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--grad); color: #06283d; font-size: 11px; font-weight: 800; margin-right: 7px; vertical-align: middle;
+}
+.nav-step {
+  display: flex; align-items: center; gap: 10px; border: 1px solid var(--accent); border-radius: 12px;
+  padding: 10px 14px; margin: 14px 0 4px; font-weight: 700;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.12), var(--bg-2));
+}
+.nav-step .num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--grad); color: #06283d; font-weight: 800; flex: 0 0 auto; }
+.nav-step.done { border-color: var(--ok); background: linear-gradient(180deg, rgba(52, 211, 153, 0.12), var(--bg-2)); }
+.nav-step.done .num { background: var(--ok); }
+
 /* ---- Thinking / loading ---- */
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse-soft { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
