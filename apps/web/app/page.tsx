@@ -10,6 +10,7 @@ const FEATURES = [
   { ic: "🚫", t: "禁忌ストップ", d: "「必ず返金します」等の地雷表現を理由つきで提示し、事故を防ぐ。" },
   { ic: "✋", t: "承認ゲート", d: "返金・法的責任・正式送信は自動実行せず人間承認へ回す。" },
   { ic: "🔗", t: "監査ログ", d: "AI判断と操作をハッシュチェーンで記録し、説明責任を担保。" },
+  { ic: "🧠", t: "暗黙知を育てる", d: "対応から学びを抽出→人間が承認→次の助言へ反映。使うほど会社が賢くなる。" },
 ];
 
 export default function Home() {
@@ -32,13 +33,18 @@ export default function Home() {
   return (
     <div className="container">
       <section className="hero">
-        <h1>
+        <span className="src-tag ai" style={{ marginLeft: 0, fontSize: 12 }}>クレーム対応から始める、社内暗黙知OS</span>
+        <h1 style={{ marginTop: 10 }}>
           クレーム対応中の人間を、<br />
           <span className="grad">AIが横で守る。</span>
         </h1>
+        <p style={{ fontSize: 19, fontWeight: 800, margin: "0 0 14px" }}>
+          守りながら、現場の<span className="grad">&ldquo;暗黙知&rdquo;を会社の資産に</span>育てる。
+        </p>
         <p className="lead">
-          会話を聞き、リスクを読み、禁忌を止め、次の一手を出す。さらに上司報告・承認・残務・監査まで。
-          単なる返信生成AIではなく、クレーム対応を安全に完了させる業務AIオペレーション基盤です。
+          会話を聞き、リスクを読み、禁忌を止め、次の一手を出す——対応中のあなたを守ります。
+          さらに一つひとつの対応から「判断のコツ（暗黙知）」を抽出・承認し、社内ルールとして蓄積。
+          使うほど会社が賢くなる、クレーム対応から始まる<strong>“暗黙知を育てる社内OS”</strong>です。
         </p>
         {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
       </section>

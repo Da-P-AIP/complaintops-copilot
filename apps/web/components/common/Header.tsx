@@ -6,7 +6,10 @@ export function Header() {
       <div className="inner">
         <Link href="/" className="brand">
           <span className="dot" />
-          ComplaintOps <span className="api">Copilot</span>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+            <span>ComplaintOps <span className="api">Copilot</span></span>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--muted)", letterSpacing: "0.02em" }}>社内暗黙知OS</span>
+          </span>
         </Link>
         <nav className="nav">
           <Link href="/">ホーム</Link>
