@@ -9,6 +9,7 @@ import { AdvicePanel } from "../../components/live/AdvicePanel";
 import { OperatorInput } from "../../components/live/OperatorInput";
 import { EvaluationPanel } from "../../components/live/EvaluationPanel";
 import { FlowPanel } from "../../components/live/FlowPanel";
+import { Thinking } from "../../components/live/Thinking";
 import type { Scenario, ConversationEvent, AnalyzeResult, Evaluation, FlowState } from "@/lib/types";
 
 export default function SimulatePage() {
@@ -162,6 +163,7 @@ export default function SimulatePage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Thinking show={busy} label={resolved ? "対応を記録しています" : "クレーム客／AIが考えています"} />
           <RiskPanel analysis={analysis} />
           <FlowPanel flow={flow} resolved={resolved} />
         </div>

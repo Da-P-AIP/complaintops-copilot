@@ -151,6 +151,26 @@ export interface AuditEvent {
   created_at: string;
 }
 
+// 業種プロファイル（呼称・特性・対応の正本テーブル単位）
+export interface IndustryProfile {
+  id: string;
+  label: string;
+  customer_term: string; // 呼称（例: ご利用者様／ご家族様）
+  setting: string; // 業種背景の説明（Geminiプロンプト用）
+  fact_finding: string; // 事実確認の定型文
+  next_confirm: string[]; // 確認アクション
+  customer_reactions: {
+    acknowledge: string;
+    factfind: string;
+    propose: string;
+    close: string;
+    resolved: string;
+  };
+  forbidden_seeds: ForbiddenPhrase[]; // 業種特有の禁忌（決定論フォールバックの種）
+  approval_seeds: string[]; // 人間承認が必要になりやすい操作
+  samples: string[]; // クレーム発話のサンプル
+}
+
 export interface CompanyRules {
   business_type: string;
   tone: string;
@@ -159,6 +179,7 @@ export interface CompanyRules {
   company_name?: string;
   industry_id?: string;
   operator_name?: string;
+  industry_profile?: IndustryProfile; // 未知業種でGemini生成した場合に保存し以後参照
 }
 
 // 業種テンプレート（02 MVP仕様 10章 / 01 設計思想 12章）

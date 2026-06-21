@@ -12,6 +12,7 @@ import { AdvicePanel } from "../../../../components/live/AdvicePanel";
 import { EvaluationPanel } from "../../../../components/live/EvaluationPanel";
 import { ImprovementPanel } from "../../../../components/live/ImprovementPanel";
 import { FlowPanel } from "../../../../components/live/FlowPanel";
+import { Thinking } from "../../../../components/live/Thinking";
 import { ClosurePanel } from "../../../../components/live/ClosurePanel";
 
 export default function LivePage({ params }: { params: { caseId: string } }) {
@@ -93,6 +94,7 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
           <ConversationLog events={events} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Thinking show={busy} label="AIが判定しています" />
           <RiskPanel analysis={analysis} />
           <FlowPanel flow={flow} />
         </div>

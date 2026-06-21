@@ -64,10 +64,19 @@ export default function Home() {
       <section className="grid-2" style={{ marginTop: 8 }}>
         <div className="card">
           <p className="section-title">① 使う（本番フロー）</p>
-          <h3 style={{ margin: "2px 0 8px", fontSize: 20 }}>初期設定して、現場対応する</h3>
+          <h3 style={{ margin: "2px 0 8px", fontSize: 20 }}>
+            約1分で、自社の対応環境が整う
+            <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: "var(--ok)", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.1)", borderRadius: 999, padding: "2px 8px" }}>⚡ 最短1分</span>
+          </h3>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            AIと対話で会社ルールを作成 → そのまま現場対応画面へ。危険な一言を止め、報告書・クローズまで安全に完了します。
+            業種を選ぶ → いくつか質問に答える → 完成。あなたの会社名・呼称・禁忌表現・承認ルールが即反映され、そのまま現場対応へ。
+            テーブルに無い業種でもAIがその場でプロファイルを生成します。
           </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "0 0 12px" }}>
+            <span className="tag">① 業種を選択</span>
+            <span className="tag">② 質問に回答</span>
+            <span className="tag">③ 確認して完成</span>
+          </div>
           <div className="cta-row">
             <Link href="/setup" className="btn">初期設定から始める</Link>
             <button className="btn ghost" onClick={quickDemo} disabled={loading}>

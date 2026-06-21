@@ -99,6 +99,19 @@ export interface ConversationEvent {
   created_at: string;
 }
 
+export interface IndustryProfile {
+  id: string;
+  label: string;
+  customer_term: string;
+  setting: string;
+  fact_finding: string;
+  next_confirm: string[];
+  customer_reactions: { acknowledge: string; factfind: string; propose: string; close: string; resolved: string };
+  forbidden_seeds: ForbiddenPhrase[];
+  approval_seeds: string[];
+  samples: string[];
+}
+
 export interface CompanyRules {
   business_type: string;
   tone: string;
@@ -107,6 +120,7 @@ export interface CompanyRules {
   company_name?: string;
   industry_id?: string;
   operator_name?: string;
+  industry_profile?: IndustryProfile;
 }
 
 export interface JobTemplate {

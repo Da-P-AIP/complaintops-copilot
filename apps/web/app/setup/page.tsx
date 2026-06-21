@@ -17,8 +17,8 @@ interface Q {
 // 簡易版の決定木フロー（業種選択のあとに枝を辿って会社データを絞り込む）
 const QUESTIONS: Q[] = [
   { id: "form", q: "御社の形態・業態はどれですか？", kind: "single", source: "api" },
-  { id: "company", q: "御社名を教えてください", kind: "free" },
-  { id: "operator", q: "主な対応担当者のお名前は？", kind: "free" },
+  { id: "company", q: "御社名を教えてください（デモでは仮名・架空名でOK）", kind: "free" },
+  { id: "operator", q: "主な対応担当者のお名前は？（デモでは仮名でご入力ください）", kind: "free" },
   { id: "complaints", q: "よくある苦情はどれですか？（複数選択可）", kind: "multi", source: "template_complaints" },
   { id: "approver", q: "返金・補償の承認は誰が行いますか？", kind: "single", source: "api" },
   { id: "notify", q: "SNS拡散など高リスク時、誰に通知しますか？", kind: "single", source: "api" },

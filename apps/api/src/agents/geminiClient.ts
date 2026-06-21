@@ -1,4 +1,4 @@
-import type { AnalyzeResult } from "@complaintops/shared";
+import type { AnalyzeResult, IndustryProfile } from "@complaintops/shared";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
@@ -33,18 +33,24 @@ async function callGemini(prompt: string, timeoutMs = 12000): Promise<string> {
 
 const SYSTEM = `あなたはクレーム対応支援AI「ComplaintOps Copilot」のエンジンです。返金確約・法的責任断定・正式送信は行いません（提案・下書きまで）。`;
 
+// 業種プロファイルから背景・呼称のヒント文を作る（正本テーブルを参照）。
+function profileHint(p?: IndustryProfile): string {
+  if (!p) return "";
+  return `# 業種の背景\n${p.setting}\n相手の呼称は「${p.customer_term}」を用い、その業界で自然な言葉づかい・用語にすること。`;
+}
+
 /**
  * 会話の文脈を踏まえてクレームを判定し、担当者が「次に」言うべき発話案を出す。
- * 既に謝罪済みなら謝罪を繰り返さず、会話の流れに沿って次の一手を返す。
  */
-export async function geminiAnalyze(text: string, history?: string): Promise<Partial<AnalyzeResult>> {
+export async function geminiAnalyze(text: string, history?: string, profile?: IndustryProfile): Promise<Partial<AnalyzeResult>> {
   const prompt = `${SYSTEM}
+${profileHint(profile)}
 # これまでの会話
 ${history && history.trim() ? history : "（まだありません）"}
 # 直近の顧客発話
 ${text}
 # 指示
-会話全体の流れを踏まえて判定し、担当者が「次に」言うべき発話案(say_this)を出してください。すでに謝罪や事実確認が済んでいれば繰り返さず、次の段階（方針提示・代替案・クロージング等）へ進めること。
+会話全体の流れを踏まえて判定し、担当者が「次に」言うべき発話案(say_this)を出してください。呼称・用語は上記の業種背景に必ず合わせること。すでに謝罪や事実確認が済んでいれば繰り返さず、次の段階（方針提示・代替案・クロージング等）へ進めること。
 # 出力（JSONのみ。前後に文章を付けない）
 {"risk_level":"low|medium|high|critical","anger_level":"low|medium|high","complaint_type":"product_damage|delivery|refund|service|billing|other","detected_risks":[],"supervisor_report_required":false,"approval_required":false,"say_this":[],"dont_say_this":[{"phrase":"","category":"refund_commitment|legal_responsibility|customer_action_restriction|dismissive|other","severity":"low|medium|high","reason":""}],"next_actions":[]}`;
   return JSON.parse(await callGemini(prompt)) as Partial<AnalyzeResult>;
@@ -52,10 +58,11 @@ ${text}
 
 /**
  * Geminiがクレーム客を演じ、担当者の対応に反応して次の一言を返す。
- * 丁寧で適切な対応なら落ち着き、責任回避・断定・突き放しなら不満を強める。
  */
-export async function geminiCustomerTurn(history: string, industryLabel: string): Promise<string> {
-  const prompt = `あなたはクレーム対応の研修で「クレーム客」を演じます。業種は「${industryLabel || "一般"}」。
+export async function geminiCustomerTurn(history: string, profile?: IndustryProfile): Promise<string> {
+  const prompt = `あなたはクレーム対応の研修で「クレーム客」を演じます。業種は「${profile?.label || "一般"}」。
+${profileHint(profile)}
+あなた自身の立場は「${profile?.customer_term || "顧客"}」です。その立場として自然な言葉づかいで話してください。
 # これまでの会話
 ${history && history.trim() ? history : "（まだありません）"}
 # 指示
@@ -86,12 +93,8 @@ export interface GeminiRulesResult {
   forbidden_phrases?: { phrase: string; category: string; severity: string; reason: string }[];
 }
 
-/** 業種・会社に即した禁忌表現・承認条件・トーンを生成する。 */
-export async function geminiSetupRules(input: {
-  industry_label?: string;
-  company_name?: string;
-  text?: string;
-}): Promise<GeminiRulesResult> {
+/** 既知業種の会社ルール（禁忌・承認・トーン）を会社情報で精緻化する。 */
+export async function geminiSetupRules(input: { industry_label?: string; company_name?: string; text?: string }): Promise<GeminiRulesResult> {
   const prompt = `あなたはクレーム対応の業務設計AIです。次の会社情報から、その業種・会社に即した「禁忌表現（担当者が言ってはいけない言葉）」「人間承認が必要な操作」「対応トーン」を作ってください。
 # 会社情報
 業種: ${input.industry_label || "一般"}
@@ -99,10 +102,35 @@ export async function geminiSetupRules(input: {
 説明: ${input.text || ""}
 # 指示
 - 禁忌表現は、その業種で実際に事故・炎上・苦情悪化につながりやすい具体的な言い回しを4〜6個。理由もその業種に即して。
-  例）介護・福祉なら「ご家族には黙っていてください」「うちの職員は悪くありません」「決まりですので無理です」等、その現場特有の地雷を。
 - category は refund_commitment / legal_responsibility / customer_action_restriction / dismissive / other のいずれか。
 - approval_required は、その会社で人間承認すべき操作（返金・補償・正式送信・法的判断など）。
 # 出力（JSONのみ。前後に文章を付けない）
 {"tone":"","approval_required":[],"forbidden_phrases":[{"phrase":"","category":"","severity":"low|medium|high","reason":""}]}`;
   return JSON.parse(await callGemini(prompt)) as GeminiRulesResult;
+}
+
+export interface GeminiProfileResult extends GeminiRulesResult {
+  customer_term?: string;
+  setting?: string;
+  fact_finding?: string;
+  next_confirm?: string[];
+  customer_reactions?: { acknowledge?: string; factfind?: string; propose?: string; close?: string; resolved?: string };
+}
+
+/** 未知業種の業種プロファイル一式（呼称・特性・事実確認・客反応・禁忌・承認・トーン）を生成する。 */
+export async function geminiIndustryProfile(industryLabel: string, text?: string): Promise<GeminiProfileResult> {
+  const prompt = `あなたはクレーム対応の業務設計AIです。「${industryLabel}」という業種について、クレーム対応の業種プロファイルを作成してください。
+${text ? `補足説明: ${text}` : ""}
+# 作るもの
+- customer_term: その業種で顧客を指す自然な呼称（例: 介護なら「ご利用者様／ご家族様」、BtoBなら「ご担当者様」）。
+- setting: その業種のクレームでよく出る文脈の説明（1〜2文）。
+- fact_finding: 事実確認のための丁寧な定型文（1文）。
+- next_confirm: その業種で確認すべき項目を3つ。
+- customer_reactions: クレーム客が各段階で言いそうな一言。acknowledge(謝罪前)/factfind(事実確認段階)/propose(方針待ち)/close(締め)/resolved(解決し矛を収める)。呼称や文脈をその業種に合わせる。
+- forbidden_phrases: その業種で言ってはいけない具体的な禁句を4〜6個（phrase, category, severity, reason）。category は refund_commitment/legal_responsibility/customer_action_restriction/dismissive/other。
+- approval_required: 人間承認が必要な操作。
+- tone: 推奨トーン。
+# 出力（JSONのみ。前後に文章を付けない）
+{"customer_term":"","setting":"","fact_finding":"","next_confirm":[],"customer_reactions":{"acknowledge":"","factfind":"","propose":"","close":"","resolved":""},"forbidden_phrases":[{"phrase":"","category":"","severity":"low|medium|high","reason":""}],"approval_required":[],"tone":""}`;
+  return JSON.parse(await callGemini(prompt)) as GeminiProfileResult;
 }

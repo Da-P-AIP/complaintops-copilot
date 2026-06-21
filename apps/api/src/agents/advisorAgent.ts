@@ -1,25 +1,10 @@
-import type { RiskResult, Advice, ForbiddenPhrase } from "@complaintops/shared";
+import type { RiskResult, Advice, ForbiddenPhrase, IndustryProfile } from "@complaintops/shared";
+import { GENERIC_PROFILE } from "../domain/industryProfiles";
 
-const FACT_FINDING: Record<string, string> = {
-  ec: "状況を正確に確認するため、注文番号と商品の状態（写真など）をご共有いただけますでしょうか。",
-  care: "状況を正確に確認するため、発生した日時と、ご利用者様のお名前・担当職員を教えていただけますでしょうか。",
-  food: "状況を正確に確認するため、ご来店の日時とお席・状況を教えていただけますでしょうか。",
-  saas: "状況を正確に確認するため、アカウントIDと発生時刻・エラー内容を教えていただけますでしょうか。",
-  mfg: "状況を正確に確認するため、注文番号やロット番号と、不具合の状況（写真など）をご共有いただけますでしょうか。",
-};
-
-const NEXT_CONFIRM: Record<string, string[]> = {
-  ec: ["注文番号を確認", "商品の状態（写真）を確認", "配送状況を確認"],
-  care: ["発生日時を確認", "ご利用者様・担当職員を確認", "支援記録を確認"],
-  food: ["来店日時・席を確認", "担当者・状況を確認", "レシートを確認"],
-  saas: ["アカウントID・契約を確認", "発生時刻・操作ログを確認", "エラー内容を確認"],
-  mfg: ["注文番号/ロットを確認", "不具合の状況（写真）を確認", "発生工程を確認"],
-};
-
-// クレーム対応の型(4ステップ)に応じた「今言うべきこと」
-const STAGE_SAY: Record<string, (fact: string) => string[]> = {
+// クレーム対応の型(4ステップ)に応じた「今言うべきこと」。呼称・事実確認は業種プロファイルから。
+const STAGE_SAY: Record<string, (p: IndustryProfile) => string[]> = {
   acknowledge: () => ["ご不快な思いをさせてしまい、申し訳ございません。", "まずは状況をしっかり伺わせてください。"],
-  factfind: (fact) => ["お話しいただきありがとうございます。", fact],
+  factfind: (p) => ["お話しいただきありがとうございます。", p.fact_finding],
   propose: () => [
     "確認のうえ、交換・代替・再対応などで進めさせていただきます。",
     "返金・補償が必要な場合は、上席の承認を得てから改めてご連絡いたします。",
@@ -41,12 +26,11 @@ export function advisorAgent(
   _text: string,
   risk: RiskResult,
   forbidden: ForbiddenPhrase[],
-  industryId = "ec",
+  profile: IndustryProfile = GENERIC_PROFILE,
   nextStage = "acknowledge",
 ): Advice {
-  const ind = NEXT_CONFIRM[industryId] ? industryId : "ec";
   const stageFn = STAGE_SAY[nextStage] ?? STAGE_SAY.acknowledge;
-  const say = stageFn(FACT_FINDING[ind]);
+  const say = stageFn(profile);
 
   const next: string[] = [];
   if (STAGE_HINT[nextStage]) next.push(`次のステップ: ${STAGE_HINT[nextStage]}`);
@@ -54,7 +38,7 @@ export function advisorAgent(
     nextStage === "factfind" &&
     (risk.detected_risks.includes("evidence_missing") || risk.detected_risks.includes("product_damage") || risk.risk_level !== "low")
   ) {
-    next.push(...NEXT_CONFIRM[ind]);
+    next.push(...profile.next_confirm);
   }
   if (risk.supervisor_report_required) next.push("上司報告を作成");
   if (risk.approval_required) next.push("返金・補償の判断は保留");

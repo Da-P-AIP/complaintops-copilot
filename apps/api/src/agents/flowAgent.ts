@@ -1,4 +1,5 @@
-import type { ConversationEvent, FlowState } from "@complaintops/shared";
+import type { ConversationEvent, FlowState, IndustryProfile } from "@complaintops/shared";
+import { GENERIC_PROFILE } from "../domain/industryProfiles";
 
 // クレーム対応の型（4ステップ）。担当者の発話がどのステップを満たしたかをキーワードで判定。
 const STAGE_DEFS = [
@@ -16,18 +17,11 @@ export function evaluateFlow(events: ConversationEvent[]): FlowState {
   return { stages, next_stage: next, all_done, resolved: all_done };
 }
 
-// 全ステップ達成で「解決」。未達ならそのステップを促すクレーム客の反応（決定論フォールバック）。
-const REACTION: Record<string, string> = {
-  acknowledge: "まず謝罪の一つもないんですか。誠意が感じられません。",
-  factfind: "状況はさっき話した通りです。それで、どうしてくれるんですか？",
-  propose: "確認はわかりましたが、結局どう対応してくれるのか教えてください。",
-  close: "それで本当に大丈夫なんですか？ちゃんと記録して、再発防止してくださいね。",
-};
-
-export function fallbackCustomerReaction(events: ConversationEvent[]): { line: string; resolved: boolean } {
+// 全ステップ達成で「解決」。未達ならそのステップを促す客の反応（業種プロファイルの呼称・文脈で）。
+export function fallbackCustomerReaction(events: ConversationEvent[], profile: IndustryProfile = GENERIC_PROFILE): { line: string; resolved: boolean } {
   const flow = evaluateFlow(events);
-  if (flow.all_done) {
-    return { line: "わかりました。丁寧にご対応いただき、ありがとうございます。引き続きよろしくお願いします。", resolved: true };
-  }
-  return { line: REACTION[flow.next_stage] ?? "それで、どうしてくれるんですか？", resolved: false };
+  const r = profile.customer_reactions;
+  if (flow.all_done) return { line: r.resolved, resolved: true };
+  const byStage: Record<string, string> = { acknowledge: r.acknowledge, factfind: r.factfind, propose: r.propose, close: r.close };
+  return { line: byStage[flow.next_stage] ?? r.factfind, resolved: false };
 }

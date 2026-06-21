@@ -6,6 +6,7 @@ import { analyzeUtterance } from "../orchestrator/ComplaintOpsOrchestrator";
 import { evaluateAgent } from "../agents/evaluateAgent";
 import { evaluateFlow, fallbackCustomerReaction } from "../agents/flowAgent";
 import { geminiCustomerTurn } from "../agents/geminiClient";
+import { resolveProfile } from "../domain/industryProfiles";
 
 export const sessionsRouter = Router();
 
@@ -72,26 +73,29 @@ sessionsRouter.post("/:sessionId/customer-turn", async (req, res) => {
 
   const prior = await store.listEvents(orgId, s.case_id);
   const priorFlow = evaluateFlow(prior);
-  const industryLabel = (req.body?.industry_label ?? "").toString();
+  const basePolicy = await store.getPolicy(orgId);
+  const overrideInd = (req.body?.industry_id ?? "").toString();
+  const industryId = overrideInd || basePolicy.industry_id;
+  const profile = resolveProfile(industryId, basePolicy);
 
   let line: string;
   let resolved = false;
   let source: "gemini" | "flow" | "fallback" = "fallback";
 
   if (priorFlow.all_done) {
-    const r = fallbackCustomerReaction(prior);
+    const r = fallbackCustomerReaction(prior, profile);
     line = r.line;
     resolved = true;
     source = "flow";
   } else if (process.env.AI_MODE === "gemini" && process.env.GEMINI_API_KEY) {
     try {
-      line = await geminiCustomerTurn(buildHistory(prior), industryLabel);
+      line = await geminiCustomerTurn(buildHistory(prior), profile);
       source = "gemini";
     } catch {
-      line = fallbackCustomerReaction(prior).line;
+      line = fallbackCustomerReaction(prior, profile).line;
     }
   } else {
-    line = fallbackCustomerReaction(prior).line;
+    line = fallbackCustomerReaction(prior, profile).line;
   }
 
   const ev: ConversationEvent = { id: genId("evt"), session_id: s.id, case_id: s.case_id, speaker: "customer", text: line, created_at: new Date().toISOString() };
@@ -99,8 +103,6 @@ sessionsRouter.post("/:sessionId/customer-turn", async (req, res) => {
 
   const all = [...prior, ev];
   const flow = evaluateFlow(all);
-  const basePolicy = await store.getPolicy(orgId);
-  const overrideInd = (req.body?.industry_id ?? "").toString();
   const policy = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
   const analysis = await analyzeUtterance(line, policy, buildHistory(all), flow.next_stage);
   await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: resolved ? "resolved_pending_close" : "in_progress" });
