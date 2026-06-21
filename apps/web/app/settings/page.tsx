@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/apiClient";
+import { industryOf } from "@/lib/industry";
+import type { CompanyRules } from "@/lib/types";
 
 interface Row {
   id: string;
@@ -8,25 +11,17 @@ interface Row {
   sub: string;
 }
 
-const SEED_LOCATIONS: Row[] = [
-  { id: "loc_1", name: "本店", sub: "東京・新宿" },
-  { id: "loc_2", name: "渋谷店", sub: "東京・渋谷" },
-];
-const SEED_OPERATORS: Row[] = [
-  { id: "u_1", name: "山田 太郎", sub: "現場担当 / 本店" },
-  { id: "u_2", name: "佐藤 花子", sub: "店長（承認者）/ 渋谷店" },
-];
-
 const SUGGEST_MODES = ["OFF", "Text", "Icon", "Digest", "Admin Only"];
 
-// 拡張オプション（今後）— 設計済み・将来実装。拡張性を示すための表示。
 const DONE = [
   "リアルタイム判定（危険度・禁忌・次アクション）",
   "承認ゲート / 禁忌ストップ / Overreach",
+  "対応フロー4ステップ（達成基準・解決ゴール）",
+  "暗黙知サイクル（学び抽出→承認→助言へ活用）",
+  "業種プロファイル（呼称・特性／未知業種はAI生成）",
   "報告書生成・クローズゲート",
   "初期設定ウィザード / 練習シミュレーション",
   "管理者ダッシュボード・案件履歴・監査ログ閲覧",
-  "改善提案パネル（PDCAの入口）",
   "テナント分離（Firebase認証＋Firestore）",
   "音声入力（Web Speech API）",
 ];
@@ -38,13 +33,12 @@ const EXTENSIONS = [
   { t: "PDCA・傾向分析（複数案件）", d: "複数案件の傾向から再発防止を提案。クロス案件の分析。" },
   { t: "役割・権限管理（RBAC）", d: "現場 / 上長 / 管理者でできる操作を制御。" },
   { t: "多言語クレーム対応", d: "外国語のクレームを解析し、日本語で助言。インバウンド対応に。" },
-  { t: "部署・ワークスペース切替", d: "1組織の中で営業課・経理部などを切り替え。各部署が独自の会社ルール・案件を持てます。" },
+  { t: "拠点・担当者の永続化／部署切替", d: "拠点・担当者・承認者をFirestoreに保存し、部署（ワークスペース）ごとに会社ルール・案件・暗黙知を分離。" },
   { t: "複数端末リアルタイム同期", d: "現場・上長・本部が同じ案件を同時に見る（Firestoreリスナー）。" },
   { t: "LINE / メール通知", d: "高リスク案件の上長通知・顧客への返信下書き。" },
   { t: "音声応答（Gemini Live）", d: "電話・対面のリアルタイム音声対応。" },
 ];
 
-// 外部連携（MCP Tool Hub 経由・未実装の拡張枠）
 const MCP_TOOLS = [
   { t: "会計・経理ソフト連携", d: "freee / マネーフォワード / 弥生 / 奉行・大臣シリーズ など。返金・補償の経理処理を連携。" },
   { t: "グループウェア連携", d: "サイボウズ Office / kintone。上司報告・承認申請をワークフローに連携。" },
@@ -54,20 +48,37 @@ const MCP_TOOLS = [
 ];
 
 export default function SettingsPage() {
-  const [locations, setLocations] = useState<Row[]>(SEED_LOCATIONS);
-  const [operators, setOperators] = useState<Row[]>(SEED_OPERATORS);
+  const [policy, setPolicy] = useState<CompanyRules | null>(null);
+  const [rulesCount, setRulesCount] = useState(0);
+  const [locations, setLocations] = useState<Row[]>([]);
+  const [operators, setOperators] = useState<Row[]>([]);
   const [newLoc, setNewLoc] = useState("");
   const [newOp, setNewOp] = useState("");
   const [mode, setMode] = useState("Text");
 
+  useEffect(() => {
+    api
+      .getActivePolicy()
+      .then((p) => {
+        setPolicy(p);
+        const ind = industryOf(p.industry_id);
+        if (p.company_name) setLocations([{ id: "loc_main", name: p.company_name, sub: `${ind.icon} ${ind.label}・主拠点` }]);
+        if (p.operator_name) setOperators([{ id: "op_main", name: p.operator_name, sub: `現場担当 / ${p.company_name || "自社"}` }]);
+      })
+      .catch(() => {});
+    api.listRules("approved").then((r) => setRulesCount(r.length)).catch(() => {});
+  }, []);
+
+  const industry = industryOf(policy?.industry_id);
+
   const addLoc = () => {
     if (!newLoc.trim()) return;
-    setLocations((p) => [...p, { id: `loc_${Date.now()}`, name: newLoc.trim(), sub: "拠点" }]);
+    setLocations((p) => [...p, { id: `loc_${Date.now()}`, name: newLoc.trim(), sub: "拠点（未保存）" }]);
     setNewLoc("");
   };
   const addOp = () => {
     if (!newOp.trim()) return;
-    setOperators((p) => [...p, { id: `u_${Date.now()}`, name: newOp.trim(), sub: "現場担当" }]);
+    setOperators((p) => [...p, { id: `u_${Date.now()}`, name: newOp.trim(), sub: "現場担当（未保存）" }]);
     setNewOp("");
   };
 
@@ -78,9 +89,29 @@ export default function SettingsPage() {
         複数拠点・複数担当者での運用を前提にした設定です。組織全体で対応品質を統一します。
       </p>
 
-      <div className="grid-2">
+      {/* 現在の会社設定：初期設定で生成された実データと連動 */}
+      <div className="card" style={{ borderLeft: `4px solid ${industry.color}` }}>
+        <p className="section-title">現在の会社設定（初期設定で生成・現場対応に反映中）</p>
+        {!policy ? (
+          <p className="hint">読み込み中…（未設定の場合は「初期設定」から作成してください）</p>
+        ) : (
+          <>
+            <div className="kv"><span className="k">会社名</span><span>{policy.company_name || "未設定"}</span></div>
+            <div className="kv"><span className="k">業種</span><span>{industry.icon} {industry.label}{policy.business_type ? `（${policy.business_type}）` : ""}</span></div>
+            <div className="kv"><span className="k">担当者</span><span>{policy.operator_name || "未設定"}</span></div>
+            <div className="kv"><span className="k">トーン</span><span>{policy.tone}</span></div>
+            <div className="kv"><span className="k">禁忌表現</span><span>{policy.forbidden_phrases.length} 件</span></div>
+            <div className="kv"><span className="k">人間承認</span><span>{policy.approval_required.length} 項目</span></div>
+            <div className="kv"><span className="k">学習済み社内ルール</span><span>{rulesCount} 件（承認済み）</span></div>
+            <p className="hint" style={{ marginTop: 6 }}>変更するには「初期設定」をやり直してください。下の拠点・担当者はこの設定から表示しています。</p>
+          </>
+        )}
+      </div>
+
+      <div className="grid-2" style={{ marginTop: 18 }}>
         <div className="card">
           <p className="section-title">拠点（複数拠点対応）</p>
+          {locations.length === 0 && <p className="hint">初期設定で会社名を登録すると表示されます。</p>}
           {locations.map((l) => (
             <div className="list-row" key={l.id}>
               <span className="grow">
@@ -93,10 +124,12 @@ export default function SettingsPage() {
             <input className="text-input" placeholder="拠点名を追加…" value={newLoc} onChange={(e) => setNewLoc(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addLoc()} />
             <button className="btn sm" onClick={addLoc}>追加</button>
           </div>
+          <p className="hint" style={{ marginTop: 6 }}>※ 追加分の永続化・部署切替は今後対応（ロードマップ）。</p>
         </div>
 
         <div className="card">
           <p className="section-title">担当者（複数担当・承認者）</p>
+          {operators.length === 0 && <p className="hint">初期設定で担当者を登録すると表示されます。</p>}
           {operators.map((o) => (
             <div className="list-row" key={o.id}>
               <span className="grow">
@@ -109,6 +142,7 @@ export default function SettingsPage() {
             <input className="text-input" placeholder="担当者名を追加…" value={newOp} onChange={(e) => setNewOp(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addOp()} />
             <button className="btn sm" onClick={addOp}>追加</button>
           </div>
+          <p className="hint" style={{ marginTop: 6 }}>※ 追加分の永続化・権限管理(RBAC)は今後対応（ロードマップ）。</p>
         </div>
       </div>
 
