@@ -14,17 +14,60 @@ interface Row {
 const SUGGEST_MODES = ["OFF", "Text", "Icon", "Digest", "Admin Only"];
 const RULE_CATS = ["事実確認", "エスカレーション", "顧客対応", "補償判断", "再発防止", "その他"];
 
-const DONE = [
-  "リアルタイム判定（危険度・禁忌・次アクション）",
-  "承認ゲート / 禁忌ストップ / Overreach",
-  "対応フロー4ステップ（達成基準・解決ゴール）",
-  "暗黙知サイクル（学び抽出→承認→助言へ活用）",
-  "業種プロファイル（呼称・特性／未知業種はAI生成）",
-  "報告書生成・クローズゲート",
-  "初期設定ウィザード / 練習シミュレーション",
-  "管理者ダッシュボード・案件履歴・監査ログ閲覧",
-  "テナント分離（Firebase認証＋Firestore）",
-  "音声入力（Web Speech API）",
+const DONE_GROUPS: { g: string; items: string[] }[] = [
+  {
+    g: "守る（リアルタイム支援）",
+    items: [
+      "危険度・怒り・検出リスクの判定",
+      "禁忌表現の検出＆ストップ（理由つき）",
+      "推奨返答・次アクションの提示",
+      "対応フロー4ステップ（達成基準・解決ゴール・動的ナビ）",
+      "担当者の対応をAI評価／改善提案",
+    ],
+  },
+  {
+    g: "暗黙知を育てる（社内暗黙知OS）",
+    items: [
+      "学びの抽出（クローズ時／ワンタップ）",
+      "暗黙知DB（候補→承認→活用）",
+      "人間承認ゲートでルール昇格",
+      "承認ルールを助言へ自動注入＋活用回数",
+      "社内ルールの手動追加・編集",
+      "業種プロファイル（呼称・特性／未知業種はAI生成）",
+    ],
+  },
+  {
+    g: "AI・会話",
+    items: [
+      "Geminiハイブリッド（安全フロア＋検証）",
+      "AIがクレーム客を演じる練習（文脈反応）",
+      "業種別の呼称・文脈を自動反映",
+    ],
+  },
+  {
+    g: "初期設定・パーソナライズ",
+    items: [
+      "初期設定ウィザード（選択肢／自由記述／音声）",
+      "会社ルール生成（禁忌・承認・トーン）",
+      "会社名・担当者・社内ルールの編集保存",
+      "画面に会社名・業種テーマを反映",
+    ],
+  },
+  {
+    g: "書類化・クローズ",
+    items: ["報告書の生成・編集・保存（クレームNo.採番）", "残務チェック・クローズゲート"],
+  },
+  {
+    g: "ガバナンス・基盤",
+    items: [
+      "管理者ダッシュボード・案件履歴",
+      "改ざん検知できるハッシュチェーン監査ログ",
+      "テナント分離（Firebase認証＋Firestore）",
+      "人間承認ゲート／デモ個人情報バナー・仮名運用",
+      "対応コンソール（本番／練習を統合）",
+      "Cloud Run デプロイ／音声入力（Web Speech API）",
+    ],
+  },
 ];
 
 const EXTENSIONS = [
@@ -256,12 +299,17 @@ export default function SettingsPage() {
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>
-        <p className="section-title">実装済みの主な機能</p>
-        <div>
-          {DONE.map((t) => (
-            <span className="tag" key={t} style={{ margin: "3px 6px 3px 0", background: "rgba(52,211,153,0.14)", color: "#86efac" }}>✅ {t}</span>
-          ))}
-        </div>
+        <p className="section-title">実装済みの主な機能（このデモで動作）</p>
+        {DONE_GROUPS.map((grp) => (
+          <div key={grp.g} style={{ marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, margin: "8px 0 4px", color: "var(--text)" }}>{grp.g}</div>
+            <div>
+              {grp.items.map((t) => (
+                <span className="tag" key={t} style={{ margin: "3px 6px 3px 0", background: "rgba(52,211,153,0.14)", color: "#86efac" }}>✅ {t}</span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>
