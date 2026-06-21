@@ -68,15 +68,29 @@ export default function Home() {
 
       {/* 2つの入口：使う（本番） / 練習する */}
       <section className="grid-2" style={{ marginTop: 8 }}>
+        <div className="card" style={{ borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent) inset" }}>
+          <p className="section-title">① メイン：対応コンソール</p>
+          <h3 style={{ margin: "2px 0 8px", fontSize: 20 }}>本番対応も練習も、ここから 🛡</h3>
+          <p style={{ color: "var(--muted)", marginTop: 0 }}>
+            会社設定（呼称・禁忌・承認・社内ルール）が判定に反映される<strong>本番対応</strong>と、AIがクレーム客を演じる<strong>練習</strong>を、ひとつの画面で。日々の入口はここです。
+          </p>
+          <div className="cta-row">
+            <Link href="/console" className="btn">対応コンソールを開く →</Link>
+            <button className="btn ghost" onClick={quickDemo} disabled={loading}>
+              {loading ? "起動中…" : "設定をスキップして試す"}
+            </button>
+          </div>
+          <p className="hint" style={{ marginTop: 8 }}>初めての方は、まず②の初期設定（約1分）を。</p>
+        </div>
+
         <div className="card">
-          <p className="section-title">① 使う（本番フロー）</p>
+          <p className="section-title">② はじめての設定（約1分）</p>
           <h3 style={{ margin: "2px 0 8px", fontSize: 20 }}>
-            約1分で、自社の対応環境が整う
+            自社の対応環境を整える
             <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: "var(--ok)", border: "1px solid rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.1)", borderRadius: 999, padding: "2px 8px" }}>⚡ 最短1分</span>
           </h3>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            業種を選ぶ → いくつか質問に答える → 完成。あなたの会社名・呼称・禁忌表現・承認ルールが即反映され、そのまま現場対応へ。
-            テーブルに無い業種でもAIがその場でプロファイルを生成します。
+            業種を選ぶ → いくつか質問に答える → 完成。会社名・呼称・禁忌表現・承認ルールが即反映。テーブルに無い業種でもAIがその場でプロファイルを生成します。
           </p>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "0 0 12px" }}>
             <span className="tag">① 業種を選択</span>
@@ -84,21 +98,7 @@ export default function Home() {
             <span className="tag">③ 確認して完成</span>
           </div>
           <div className="cta-row">
-            <Link href="/setup" className="btn">初期設定から始める</Link>
-            <button className="btn ghost" onClick={quickDemo} disabled={loading}>
-              {loading ? "起動中…" : "設定をスキップして試す"}
-            </button>
-          </div>
-        </div>
-
-        <div className="card">
-          <p className="section-title">② 練習する</p>
-          <h3 style={{ margin: "2px 0 8px", fontSize: 20 }}>クレーム対応を練習する</h3>
-          <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            AIがクレーム客を演じるシミュレーション。危険度・禁忌・推奨返答を見ながら、選ぶだけで安全な対応を体験できます。
-          </p>
-          <div className="cta-row">
-            <Link href="/console#practice" className="btn ghost">練習モードへ →</Link>
+            <Link href="/setup" className="btn ghost">初期設定から始める →</Link>
           </div>
         </div>
       </section>
