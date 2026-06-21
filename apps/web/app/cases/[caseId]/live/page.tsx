@@ -105,9 +105,9 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: 16, marginTop: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <ConversationLog events={events} maxHeight={340} />
           <ConversationInput onSend={onSend} disabled={!sessionId || busy} samples={industry.samples} step={1} />
           <OperatorInput onSend={onOperator} disabled={!sessionId || busy} step={4} suggestions={analysis?.say_this ?? []} />
-          <ConversationLog events={events} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Thinking show={busy} label="AIが判定しています" />

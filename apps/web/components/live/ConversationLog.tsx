@@ -6,19 +6,19 @@ const WHO: Record<string, string> = {
   system: "システム",
 };
 
-export function ConversationLog({ events }: { events: ConversationEvent[] }) {
+export function ConversationLog({ events, maxHeight }: { events: ConversationEvent[]; maxHeight?: number }) {
   return (
     <div className="card">
-      <p className="section-title">会話ログ</p>
-      {events.length === 0 && (
-        <p style={{ color: "var(--muted)" }}>顧客の発話を入力してください。</p>
-      )}
-      {events.map((e) => (
-        <div className="bubble" key={e.id}>
-          <div className="who">{WHO[e.speaker] ?? e.speaker}</div>
-          <div>{e.text}</div>
-        </div>
-      ))}
+      <p className="section-title">会話ログ（現在の進行）</p>
+      <div style={maxHeight ? { maxHeight, overflowY: "auto" } : undefined}>
+        {events.length === 0 && <p style={{ color: "var(--muted)" }}>顧客の発話を入力してください。</p>}
+        {events.map((e) => (
+          <div className="bubble" key={e.id}>
+            <div className="who">{WHO[e.speaker] ?? e.speaker}</div>
+            <div>{e.text}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -37,6 +37,7 @@ export default function SetupPage() {
   const [multi, setMulti] = useState<string[]>([]);
   const [rules, setRules] = useState<CompanyRules | null>(null);
   const [busy, setBusy] = useState(false);
+  const [optLoading, setOptLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { supported, listening, start, stop } = useSpeechRecognition("ja-JP");
 
@@ -54,12 +55,15 @@ export default function SetupPage() {
     if (question.source === "template_complaints") {
       setOptions(tmpl?.common_complaints ?? []);
     } else if (question.source === "api") {
+      setOptLoading(true);
       try {
         const r = await api.getInterviewOptions(question.id, { industry_id: tmpl?.id ?? "" });
         setOptions(r.choices);
         setOptSource(r.source);
       } catch {
         setOptions([]);
+      } finally {
+        setOptLoading(false);
       }
     }
   };
@@ -177,61 +181,75 @@ export default function SetupPage() {
         <div className="card">
           <div className="q-title">
             {q.q}
-            {q.source === "api" && optSource && (
+            {q.source === "api" && optSource && !optLoading && !busy && (
               <span className={`src-tag${optSource === "gemini" ? " ai" : ""}`}>
                 {optSource === "gemini" ? "AI生成" : "候補"}
               </span>
             )}
           </div>
 
-          {(q.kind === "single") && (
-            <div className="choices">
-              {options.map((c) => (
-                <button key={c} className="choice" onClick={() => goNext(c)}>{c}</button>
-              ))}
+          {busy ? (
+            <div className="thinking" style={{ marginTop: 8 }}>
+              <span className="spinner" />
+              <span className="label">会社ルールを生成しています</span>
             </div>
-          )}
-
-          {q.kind === "multi" && (
+          ) : optLoading ? (
+            <div className="thinking" style={{ marginTop: 8 }}>
+              <span className="spinner" />
+              <span className="label">選択肢を生成中</span>
+            </div>
+          ) : (
             <>
-              <div className="choices">
-                {options.map((c) => (
-                  <button key={c} className={`choice${multi.includes(c) ? " sel" : ""}`} onClick={() => toggleMulti(c)}>{c}</button>
-                ))}
+              {q.kind === "single" && (
+                <div className="choices">
+                  {options.map((c) => (
+                    <button key={c} className="choice" onClick={() => goNext(c)}>{c}</button>
+                  ))}
+                </div>
+              )}
+
+              {q.kind === "multi" && (
+                <>
+                  <div className="choices">
+                    {options.map((c) => (
+                      <button key={c} className={`choice${multi.includes(c) ? " sel" : ""}`} onClick={() => toggleMulti(c)}>{c}</button>
+                    ))}
+                  </div>
+                  <div className="input-actions">
+                    <button className="btn" onClick={() => goNext(multi.join("、") || free.trim())} disabled={multi.length === 0 && !free.trim()}>次へ</button>
+                  </div>
+                </>
+              )}
+
+              <div className="input-row" style={{ marginTop: 8 }}>
+                <input
+                  className="text-input"
+                  value={free}
+                  placeholder={q.kind === "free" ? "ここに入力 / マイクで音声入力…" : "選択肢にない場合は自由記述…"}
+                  onChange={(e) => setFree(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && free.trim() && goNext(free.trim())}
+                />
+                <button
+                  className={`mic-btn${listening ? " listening" : ""}`}
+                  onClick={toggleMic}
+                  title={supported ? "音声入力" : "この環境は音声非対応（Chrome/Edge推奨）"}
+                  aria-label="音声入力"
+                  style={!supported ? { opacity: 0.5 } : undefined}
+                >
+                  {listening ? "■" : "🎙"}
+                </button>
+                {(q.kind === "free" || q.kind === "single") && (
+                  <button className="btn" onClick={() => free.trim() && goNext(free.trim())} disabled={!free.trim()}>次へ</button>
+                )}
               </div>
-              <div className="input-actions">
-                <button className="btn" onClick={() => goNext(multi.join("、") || free.trim())} disabled={multi.length === 0 && !free.trim()}>次へ</button>
+              <p className="hint" style={{ marginTop: 8 }}>{supported ? "🎙 音声入力できます" : "※音声はChrome/Edge推奨"}</p>
+              <div className="input-actions" style={{ marginTop: 4 }}>
+                <button className="btn ghost sm" onClick={goBack}>
+                  {idx === 0 ? "← 業種選択に戻る" : "← 前の質問に戻る"}
+                </button>
               </div>
             </>
           )}
-
-          <div className="input-row" style={{ marginTop: 8 }}>
-            <input
-              className="text-input"
-              value={free}
-              placeholder={q.kind === "free" ? "ここに入力 / マイクで音声入力…" : "選択肢にない場合は自由記述…"}
-              onChange={(e) => setFree(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && free.trim() && goNext(free.trim())}
-            />
-            <button
-              className={`mic-btn${listening ? " listening" : ""}`}
-              onClick={toggleMic}
-              title={supported ? "音声入力" : "この環境は音声非対応（Chrome/Edge推奨）"}
-              aria-label="音声入力"
-              style={!supported ? { opacity: 0.5 } : undefined}
-            >
-              {listening ? "■" : "🎙"}
-            </button>
-            {(q.kind === "free" || q.kind === "single") && (
-              <button className="btn" onClick={() => free.trim() && goNext(free.trim())} disabled={!free.trim()}>次へ</button>
-            )}
-          </div>
-          <p className="hint" style={{ marginTop: 8 }}>{supported ? "🎙 音声入力できます" : "※音声はChrome/Edge推奨"}</p>
-          <div className="input-actions" style={{ marginTop: 4 }}>
-            <button className="btn ghost sm" onClick={goBack}>
-              {idx === 0 ? "← 業種選択に戻る" : "← 前の質問に戻る"}
-            </button>
-          </div>
         </div>
       )}
 
