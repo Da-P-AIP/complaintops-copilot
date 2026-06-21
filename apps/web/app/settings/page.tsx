@@ -139,6 +139,7 @@ export default function SettingsPage() {
             <div className="kv"><span className="k">人間承認</span><span>{policy.approval_required.length} 項目</span></div>
             <div className="kv"><span className="k">社内ルール</span><span>{rules.length} 件（承認済み）</span></div>
             <p className="hint" style={{ marginTop: 6 }}>業種・禁忌の変更は「初期設定」をやり直してください。会社名・担当者・社内ルールはこの画面で編集できます。</p>
+            <a href="/setup" className="btn ghost sm" style={{ marginTop: 8, display: "inline-block" }}>初期設定をやり直す</a>
           </>
         )}
       </div>

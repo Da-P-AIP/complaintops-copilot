@@ -80,9 +80,12 @@ export default function LivePage({ params }: { params: { caseId: string } }) {
 
   return (
     <div className="container" style={{ "--accent": industry.color } as React.CSSProperties}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2 style={{ margin: 0 }}>現場対応画面</h2>
-        <span style={{ color: industry.color, fontWeight: 700 }}>クレーム No.{caseNo ?? "—"}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+        <h2 style={{ margin: 0 }}>対応コンソール（本番）</h2>
+        <span style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+          <a href="/console#practice" className="hint" style={{ color: "var(--warn)" }}>🧪 練習を開く</a>
+          <span style={{ color: industry.color, fontWeight: 700 }}>クレーム No.{caseNo ?? "—"}</span>
+        </span>
       </div>
 
       <div className="card" style={{ marginTop: 10, borderLeft: `4px solid ${industry.color}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>

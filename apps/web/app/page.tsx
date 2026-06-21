@@ -92,7 +92,7 @@ export default function Home() {
             AIがクレーム客を演じるシミュレーション。危険度・禁忌・推奨返答を見ながら、選ぶだけで安全な対応を体験できます。
           </p>
           <div className="cta-row">
-            <Link href="/simulate" className="btn ghost">練習モードへ →</Link>
+            <Link href="/console#practice" className="btn ghost">練習モードへ →</Link>
           </div>
         </div>
       </section>
