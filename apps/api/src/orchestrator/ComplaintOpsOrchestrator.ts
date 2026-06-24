@@ -60,8 +60,11 @@ export async function analyzeUtterance(text: string, policy: CompanyRules = DEFA
   const profile = resolveProfile(policy.industry_id, policy);
   const floor = mockAnalyze(text, policy, profile, nextStage);
   if (process.env.AI_MODE !== "gemini" || !process.env.GEMINI_API_KEY) return withRules(floor, policy);
+  // 意味検索で選ばれ policy.learned_rules に載った暗黙知を、Geminiの推論プロンプトへも注入する
+  // （従来は next_actions への後付け表示のみ。ここで“推論そのもの”に効かせる）。
+  const learned = (policy.learned_rules ?? []).map((r) => r.statement);
   try {
-    const g = await geminiAnalyze(text, history, profile);
+    const g = await geminiAnalyze(text, history, profile, learned);
     const detected = new Set<DetectedRisk>([
       ...floor.detected_risks,
       ...((g.detected_risks as DetectedRisk[] | undefined) ?? []),

@@ -60,12 +60,24 @@ function profileHint(p?: IndustryProfile): string {
   return `# 業種の背景\n${p.setting}\n相手の呼称は「${p.customer_term}」を用い、その業界で自然な言葉づかい・用語にすること。`;
 }
 
+// 過去の対応から蓄積した「社内の暗黙知（承認済みルール）」をプロンプトに注入する。
+// 意味検索で選ばれた“今の案件に関連する”ルールだけが渡ってくる前提。
+function knowledgeHint(rules?: string[]): string {
+  const list = (rules ?? []).map((s) => (s || "").trim()).filter(Boolean);
+  if (list.length === 0) return "";
+  return `# 社内の暗黙知（過去の対応から承認された学び・最優先で踏まえる）
+${list.map((s) => `- ${s}`).join("\n")}
+これらは自社で実際に有効だった判断指針です。say_this / next_actions に自然に反映してください（丸写しはしない）。ただし金銭・補償の確約ガードは暗黙知より優先します。`;
+}
+
 /**
  * 会話の文脈を踏まえてクレームを判定し、担当者が「次に」言うべき発話案を出す。
+ * @param learnedRules 意味検索で選ばれた、今の案件に関連する承認済み社内ルールの本文。
  */
-export async function geminiAnalyze(text: string, history?: string, profile?: IndustryProfile): Promise<Partial<AnalyzeResult>> {
+export async function geminiAnalyze(text: string, history?: string, profile?: IndustryProfile, learnedRules?: string[]): Promise<Partial<AnalyzeResult>> {
   const prompt = `${SYSTEM}
 ${profileHint(profile)}
+${knowledgeHint(learnedRules)}
 # これまでの会話
 ${history && history.trim() ? history : "（まだありません）"}
 # 直近の顧客発話

@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { KnowledgeRule } from "@complaintops/shared";
 import { getStore, genId } from "../db/store";
 import { ok, fail } from "../utils/response";
+import { indexRule } from "../lib/elasticClient";
 
 export const rulesRouter = Router();
 
@@ -31,6 +32,7 @@ rulesRouter.post("/", async (req, res) => {
     approved_by: "admin",
   };
   await store.addRule(orgId, rule);
+  await indexRule(orgId, rule); // Elastic有効時のみ意味検索用にインデックス（best-effort）
   await store.appendAudit(orgId, { case_id: null, actor: "admin", action: "knowledge.manual_add", detail: { rule_id: rule.id } });
   ok(res, rule, 201);
 });
@@ -41,6 +43,7 @@ rulesRouter.post("/:id/approve", async (req, res) => {
   const store = getStore();
   const r = await store.setRuleStatus(orgId, req.params.id, "approved", "admin");
   if (!r) return fail(res, "NOT_FOUND", "ルールが見つかりません", 404);
+  await indexRule(orgId, r); // 承認された瞬間に意味検索の対象へ（best-effort）
   await store.appendAudit(orgId, { case_id: null, actor: "admin", action: "knowledge.approve", detail: { rule_id: r.id } });
   ok(res, r);
 });

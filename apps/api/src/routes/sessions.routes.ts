@@ -6,6 +6,7 @@ import { analyzeUtterance } from "../orchestrator/ComplaintOpsOrchestrator";
 import { evaluateAgent } from "../agents/evaluateAgent";
 import { evaluateFlow, fallbackCustomerReaction } from "../agents/flowAgent";
 import { geminiCustomerTurn } from "../agents/geminiClient";
+import { selectRelevantRules } from "../agents/knowledgeRetriever";
 import { resolveProfile } from "../domain/industryProfiles";
 
 export const sessionsRouter = Router();
@@ -52,12 +53,14 @@ sessionsRouter.post("/:sessionId/events", async (req, res) => {
     const overrideInd = (req.body?.industry_id ?? "").toString();
     const baseP = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
     const approved = await store.listRules(orgId, "approved");
-    const applicable = approved.filter((r) => !r.industry_id || r.industry_id === baseP.industry_id).slice(0, 3);
+    // 先頭3件ではなく「直近の発話に意味が近い」上位3件を選ぶ（Elastic→ローカル→先頭の順でフォールバック）。
+    const picked = await selectRelevantRules(orgId, text, approved, { industryId: baseP.industry_id, k: 3 });
+    const applicable = picked.rules;
     const policy = applicable.length > 0 ? { ...baseP, learned_rules: applicable } : baseP;
     analysis = await analyzeUtterance(text, policy, buildHistory(all), flow.next_stage);
     if (applicable.length > 0) await store.bumpRuleUse(orgId, applicable.map((r) => r.id));
     await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: "in_progress" });
-    await store.appendAudit(orgId, { case_id: s.case_id, actor: "ai", action: "ai.analyze", detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks } });
+    await store.appendAudit(orgId, { case_id: s.case_id, actor: "ai", action: "ai.analyze", detail: { risk_level: analysis.risk_level, detected_risks: analysis.detected_risks, knowledge_method: picked.method, knowledge_used: applicable.map((r) => r.id) } });
   } else if (speaker === "operator") {
     const policy = await store.getPolicy(orgId);
     evaluation = evaluateAgent(text, policy);
@@ -109,11 +112,14 @@ sessionsRouter.post("/:sessionId/customer-turn", async (req, res) => {
   const flow = evaluateFlow(all);
   const baseP = overrideInd ? { ...basePolicy, industry_id: overrideInd } : basePolicy;
   const approved = await store.listRules(orgId, "approved");
-  const applicable = approved.filter((r) => !r.industry_id || r.industry_id === baseP.industry_id).slice(0, 3);
+  // 生成された顧客発話に意味が近い暗黙知を選ぶ（先頭3件ではなく関連順）。
+  const picked = await selectRelevantRules(orgId, line, approved, { industryId: baseP.industry_id, k: 3 });
+  const applicable = picked.rules;
   const policy = applicable.length > 0 ? { ...baseP, learned_rules: applicable } : baseP;
   const analysis = await analyzeUtterance(line, policy, buildHistory(all), flow.next_stage);
+  if (applicable.length > 0) await store.bumpRuleUse(orgId, applicable.map((r) => r.id));
   await store.patchCase(orgId, s.case_id, { latest_risk: riskOf(analysis), status: resolved ? "resolved_pending_close" : "in_progress" });
-  await store.appendAudit(orgId, { case_id: s.case_id, actor: "customer", action: "customer.turn", detail: { source, resolved } });
+  await store.appendAudit(orgId, { case_id: s.case_id, actor: "customer", action: "customer.turn", detail: { source, resolved, knowledge_method: picked.method, knowledge_used: applicable.map((r) => r.id) } });
 
   ok(res, { event: ev, analysis, flow, resolved, source }, 201);
 });
